@@ -28,4 +28,10 @@ contract BytesConvertMock {
     return _source.toBytes32();
   }
 
+  /**
+   * @dev firstParameter
+   */
+  function firstParameter(bytes memory _source) public pure returns (bytes32 result) {
+    return _source.firstParameter();
+  }
 }

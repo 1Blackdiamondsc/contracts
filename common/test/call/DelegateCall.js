@@ -8,6 +8,7 @@ const assertRevert = require('../helpers/assertRevert');
 const DelegateMock = artifacts.require('DelegateMock.sol');
 const DelegateCallMock = artifacts.require('DelegateCallMock.sol');
 
+const STRING = 'TheAnswerToLife';
 const BYTES = web3.utils.toHex('TheAnswerToLife').padEnd(66, '0');
 
 contract('DelegateCall', function (accounts) {
@@ -70,5 +71,14 @@ contract('DelegateCall', function (accounts) {
 
   it('should fail with error when unsucessfull bytes', async function () {
     await assertRevert(delegateCall.delegateCallBytesMock('0x'), 'DM06');
+  });
+
+  it('should delegate bytes', async function () {
+    const tx = await delegateCall.delegateCallStringMock(STRING);
+    assert.ok(tx.receipt.status, 'Status');
+  });
+
+  it('should fail with error when unsucessfull bytes', async function () {
+    await assertRevert(delegateCall.delegateCallStringMock(''), 'DM07');
   });
 });

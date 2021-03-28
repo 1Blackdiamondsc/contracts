@@ -10,6 +10,7 @@ const Proxy = artifacts.require('Proxy.sol');
 const CoreMock = artifacts.require('CoreMock.sol');
 
 const NULL_ADDRESS = '0x'.padEnd(42, '0');
+const STRING = 'TheAnswerToLife';
 const BYTES = web3.utils.toHex('TheAnswerToLife').padEnd(66, '0');
 
 contract('Core', function (accounts) {
@@ -82,6 +83,12 @@ contract('Core', function (accounts) {
         const bytes = await core.delegateCallBytesMock.call(BYTES);
         assert.equal(bytes.length, 194, 'bytes length');
         assert.ok(bytes.indexOf(BYTES.substr(2)) !== -1, 'bytes ends');
+      });
+
+      it('should delegate call view string', async function () {
+        const string = await core.delegateCallStringMock.call(STRING);
+        assert.equal(string.length, STRING.length, 'length');
+        assert.ok(string, STRING, 'string');
       });
     });
 

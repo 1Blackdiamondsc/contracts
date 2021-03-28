@@ -38,4 +38,10 @@ library DelegateCall {
     (status, result) = _delegate.delegatecall(msg.data);
     require(status, string(result));
   }
+
+  function _delegateCallString(address _delegate)
+    internal returns (string memory result)
+  {
+    result = abi.decode(_delegateCallBytes(_delegate), (string));
+  }
 }

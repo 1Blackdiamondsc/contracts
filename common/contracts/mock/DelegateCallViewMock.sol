@@ -31,4 +31,7 @@ contract DelegateCallViewMock is DelegateCallView {
     return _delegateCallBytes(delegate);
   }
 
+  function delegateCallStringMock(string memory) public view returns (string memory) {
+    return _delegateCallString(delegate);
+  }
 }

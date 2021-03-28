@@ -44,4 +44,7 @@ contract DelegateCallMock {
     return delegate._delegateCallBytes();
   }
 
+  function delegateCallStringMock(string memory) public returns (string memory) {
+    return delegate._delegateCallString();
+  }
 }

@@ -8,6 +8,7 @@ const assertRevert = require('../helpers/assertRevert');
 const DelegateViewMock = artifacts.require('DelegateViewMock.sol');
 const DelegateCallViewMock = artifacts.require('DelegateCallViewMock.sol');
 
+const STRING = 'TheAnswerToLife';
 const BYTES = web3.utils.toHex('TheAnswerToLife').padEnd(66, '0');
 
 contract('DelegateCallView', function (accounts) {
@@ -48,5 +49,15 @@ contract('DelegateCallView', function (accounts) {
 
   it('should not be possible to call forwardCallBytes directly', async function () {
     await assertRevert(delegateView.forwardCallBytes(delegate.address, '0x'), 'DV01');
+  });
+
+  it('should delegate call view string', async function () {
+    const string = await delegateView.delegateCallStringMock.call(STRING);
+    assert.equal(string.length, 15, 'string length');
+    assert.equal(string, STRING, 'string');
+  });
+
+  it('should fail with error when unsucessfull call view string', async function () {
+    await assertRevert(delegateView.delegateCallStringMock.call(''), 'DVM04');
   });
 });

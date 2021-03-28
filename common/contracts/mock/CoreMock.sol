@@ -26,19 +26,23 @@ contract CoreMock is Core {
   }
 
   function delegateMockTxSuccess(bool) public returns (bool) {
-    return delegateCall(msg.sender);
+    return delegateCall();
   }
 
   function delegateCallBoolMock(bool) public returns (bool) {
-    return delegateCallBool(msg.sender);
+    return delegateCallBool();
   }
 
   function delegateCallUint256Mock(uint256) public returns (uint256) {
-    return delegateCallUint256(msg.sender);
+    return delegateCallUint256();
   }
 
   function delegateCallBytesMock(bytes memory) public returns (bytes memory) {
-    return delegateCallBytes(msg.sender);
+    return delegateCallBytes();
+  }
+
+  function delegateCallStringMock(string memory) public returns (string memory) {
+    return delegateCallString();
   }
 
   function migrateProxyMock(address _proxy, address _newCore) public returns (bool) {

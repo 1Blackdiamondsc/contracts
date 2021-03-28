@@ -9,6 +9,8 @@ const ProxyMock = artifacts.require('ProxyMock.sol');
 const DelegateViewMock = artifacts.require('DelegateViewMock.sol');
 const CoreMock = artifacts.require('CoreMock.sol');
 
+const STRING = 'TheAnswerIsLife';
+
 contract('Proxy', function (accounts) {
   let core, delegate, proxy;
 
@@ -29,6 +31,16 @@ contract('Proxy', function (accounts) {
 
     it('should have static call failing', async function () {
       await assertRevert(proxy.delegateCallUint256Mock(0), 'DVM02');
+    });
+
+    it('should have static call string successfull', async function () {
+      const result = await proxy.delegateCallStringMock(STRING);
+      assert.equal(result.length, STRING.length, 'string length');
+      assert.equal(result, STRING, 'result call');
+    });
+
+    it('should have static call string failling', async function () {
+      await assertRevert(proxy.delegateCallStringMock(''), 'DVM04');
     });
   });
 

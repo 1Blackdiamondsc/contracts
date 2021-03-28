@@ -22,4 +22,8 @@ contract ProxyMock is Proxy {
   function delegateCallUint256Mock(uint256) public view returns (uint256) {
     return staticCallUint256();
   }
+
+  function delegateCallStringMock(string memory) public view returns (string memory) {
+    return staticCallString();
+  }
 }

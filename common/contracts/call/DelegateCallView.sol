@@ -37,6 +37,12 @@ contract DelegateCallView {
     result = abi.decode(result, (bytes));
   }
 
+  function _delegateCallString(address _delegate)
+    internal view returns (string memory result)
+  {
+    (result) = abi.decode(_delegateCallBytes(_delegate), (string));
+  }
+
   /**
    * @dev enforce static immutability (view)
    * @dev in order to read delegate value through internal delegateCall

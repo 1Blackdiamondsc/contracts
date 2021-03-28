@@ -15,13 +15,15 @@ import "../core/Delegate.sol";
  *   DM03: Call must return true
  *   DM04: Call must return false
  *   DM05: Value must be 0
- *   DM06: Message must not be null
+ *   DM06: Data must not be null
+ *   DN07: Message must not be null
  */
 contract DelegateMock is Delegate {
 
   bool public success;
   uint256 public value;
-  bytes public message;
+  bytes public data;
+  string public message;
 
   function delegateMockTxSuccess(bool _success) public returns (bool) {
     require(_success, "DM01");
@@ -53,9 +55,15 @@ contract DelegateMock is Delegate {
     return _value;
   }
 
-  function delegateCallBytesMock(bytes memory _message) public returns (bytes memory) {
-    require(_message.length > 0, "DM06");
+  function delegateCallBytesMock(bytes memory _data) public returns (bytes memory) {
+    require(_data.length > 0, "DM06");
+    data = _data;
+    return _data;
+  }
+
+  function delegateCallStringMock(string memory _message) public returns (bytes memory) {
+    require(bytes(_message).length > 0, "DM07");
     message = _message;
-    return _message;
+    return abi.encode(_message);
   }
 }

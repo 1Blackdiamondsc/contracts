@@ -40,4 +40,21 @@ contract('BytesConvert', function (accounts) {
   it('should prevent convert to large value to bytes32', async function () {
     await assertRevert(contract.toBytes32('0x1234'.padEnd(67, '0')), 'BC02');
   });
+
+  it('should prevent extracting value from a too short source', async function () {
+    const addressParam = accounts[0].substr(3);
+    await assertRevert(contract.firstParameter('0x12345678' + addressParam), 'BC03');
+  });
+
+  it('should extract first parameter from source', async function () {
+    const addressParam = accounts[0].substr(2).padStart(64, '0');
+    const parameter = await contract.firstParameter('0x12345678' + addressParam);
+    assert.equal(parameter, '0x' + addressParam.toLowerCase(), 'bytes32');
+  });
+
+  it('should extract value from a large source', async function () {
+    const addressParam = accounts[0].substr(2).padStart(64, '0');
+    const parameter = await contract.firstParameter('0x12345678' + addressParam + '1111');
+    assert.equal(parameter, '0x' + addressParam.toLowerCase(), 'bytes32');
+  });
 });

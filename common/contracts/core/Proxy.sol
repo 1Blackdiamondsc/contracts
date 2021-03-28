@@ -48,4 +48,14 @@ contract Proxy is IProxy {
     require(status, string(result));
     value = abi.decode(result, (uint256));
   }
+
+  /**
+   * @dev enforce static immutability (view)
+   * @dev in order to read core value through internal core delegateCall
+   */
+  function staticCallString() internal view returns (string memory value) {
+    (bool status, bytes memory result) = core.staticcall(msg.data);
+    require(status, string(result));
+    value = abi.decode(result, (string));
+  }
 }

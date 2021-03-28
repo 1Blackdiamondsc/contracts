@@ -11,6 +11,7 @@ pragma solidity ^0.8.0;
  * Error Messages:
  *   BC01: source must be a valid 32-bytes length
  *   BC02: source must not be greater than 32-bytes
+ *   BC03: source must contain at least one 32-bytes parameter
  **/
 library BytesConvert {
 
@@ -33,6 +34,17 @@ library BytesConvert {
     // solhint-disable-next-line no-inline-assembly
     assembly {
       result := mload(add(_source, 0x20))
+    }
+  }
+
+  /**
+   * @dev firstParameter
+   */
+  function firstParameter(bytes memory _source) internal pure returns (bytes32 result) {
+    require(_source.length >= 36, "BC03");
+    // solhint-disable-next-line no-inline-assembly
+    assembly {
+      result := mload(add(_source, 0x24))
     }
   }
 }

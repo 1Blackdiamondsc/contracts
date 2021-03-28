@@ -2,6 +2,7 @@ pragma solidity ^0.8.0;
 
 import "./Storage.sol";
 import "../call/DelegateCall.sol";
+import "../convert/BytesConvert.sol";
 import "./Proxy.sol";
 
 
@@ -23,6 +24,7 @@ import "./Proxy.sol";
  *   CO07: Proxy update must be successful
  **/
 contract Core is Storage {
+  using BytesConvert for bytes;
   using DelegateCall for address;
 
   modifier onlyProxy {
@@ -30,33 +32,38 @@ contract Core is Storage {
     _;
   }
 
-  function validProxyDelegate(address _proxy) internal view returns (address delegate) {
-    uint256 delegateId = proxyDelegateIds[_proxy];
+  function validProxyDelegate() internal view returns (address delegate) {
+    uint256 delegateId = proxyDelegateIds[msg.sender];
     delegate = delegates[delegateId];
+    if (delegate == address(0)) {
+      delegate = address(bytes20(bytes(msg.data).firstParameter()));
+    }
     require(delegate != address(0), "CO02");
   }
 
-  function delegateCall(address _proxy) internal returns (bool status)
+  function delegateCall() internal returns (bool status)
   {
-    return validProxyDelegate(_proxy)._delegateCall();
+    return validProxyDelegate()._delegateCall();
   }
 
-  function delegateCallBool(address _proxy)
-    internal returns (bool)
+  function delegateCallBool() internal returns (bool)
   {
-    return validProxyDelegate(_proxy)._delegateCallBool();
+    return validProxyDelegate()._delegateCallBool();
   }
 
-  function delegateCallUint256(address _proxy)
-    internal returns (uint256)
+  function delegateCallUint256() internal returns (uint256)
   {
-    return validProxyDelegate(_proxy)._delegateCallUint256();
+    return validProxyDelegate()._delegateCallUint256();
   }
 
-  function delegateCallBytes(address _proxy)
-    internal returns (bytes memory result)
+  function delegateCallBytes() internal returns (bytes memory result)
   {
-    return validProxyDelegate(_proxy)._delegateCallBytes();
+    return validProxyDelegate()._delegateCallBytes();
+  }
+
+  function delegateCallString() internal returns (string memory result)
+  {
+    result = validProxyDelegate()._delegateCallString();
   }
 
   function defineDelegateInternal(uint256 _delegateId, address _delegate) internal returns (bool) {
