@@ -1,5 +1,6 @@
 pragma solidity ^0.8.0;
 
+import "../interface/ILockableDelegate.sol";
 import "./STransferData.sol";
 import "../TokenStorage.sol";
 
@@ -16,12 +17,12 @@ import "../TokenStorage.sol";
  * LD01: locks must be valid proxies
  * LD02: startAt must be before or equal to endAt
  */
-abstract contract LockableDelegate is TokenStorage {
+abstract contract LockableDelegate is ILockableDelegate, TokenStorage {
 
   /**
    * @dev define token lock
    */
-  function defineTokenLocks(address _token, address[] memory _locks) public returns (bool)
+  function defineTokenLocks(address _token, address[] memory _locks) public override returns (bool)
   {
     for(uint256 i=0; i < _locks.length; i++) {
       require(delegates[proxyDelegateIds[_locks[i]]] != address(0), "LD01");
@@ -40,7 +41,7 @@ abstract contract LockableDelegate is TokenStorage {
     address _sender,
     address _receiver,
     uint64 _startAt,
-    uint64 _endAt) public returns (bool)
+    uint64 _endAt) public override returns (bool)
   {
     require(_startAt <= _endAt, "LD02");
     locks[_lock][_sender][_receiver] = LockData(_startAt, _endAt);

@@ -88,7 +88,7 @@ contract('Core', function (accounts) {
       it('should delegate call view string', async function () {
         const string = await core.delegateCallStringMock.call(STRING);
         assert.equal(string.length, STRING.length, 'length');
-        assert.ok(string, STRING, 'string');
+        assert.equal(string, STRING, 'string');
       });
     });
 

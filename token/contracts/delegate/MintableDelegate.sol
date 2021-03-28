@@ -1,5 +1,6 @@
 pragma solidity ^0.8.0;
 
+import "../interface/IMintableDelegate.sol";
 import "../TokenStorage.sol";
 import "../TokenProxy.sol";
 
@@ -17,7 +18,7 @@ import "../TokenProxy.sol";
  * MT03: Transfer events must be generated
  * MT04: Parameters must be same length
  */
-abstract contract MintableDelegate is TokenStorage {
+abstract contract MintableDelegate is IMintableDelegate, TokenStorage {
 
   modifier canMint(address _token) {
     require(!tokens[_token].mintingFinished, "MT01");
@@ -30,7 +31,7 @@ abstract contract MintableDelegate is TokenStorage {
    * @return A boolean that indicates if the operation was successful.
    */
   function burn(address _token, uint256 _amount)
-    public returns (bool)
+    public override returns (bool)
   {
     TokenData storage token = tokens[_token];
     require(_amount <= token.balances[msg.sender], "MT02");
@@ -52,7 +53,7 @@ abstract contract MintableDelegate is TokenStorage {
    * @return success The boolean that indicates if the operation was successful.
    */
   function mint(address _token, address[] memory _recipients, uint256[] memory _amounts)
-    public canMint(_token) returns (bool success)
+    public override canMint(_token) returns (bool success)
   {
     require(_recipients.length == _amounts.length, "MT04");
 
@@ -67,7 +68,7 @@ abstract contract MintableDelegate is TokenStorage {
    * @return True if the operation was successful.
    */
   function finishMinting(address _token)
-    public canMint(_token) returns (bool)
+    public override canMint(_token) returns (bool)
   {
     tokens[_token].mintingFinished = true;
     emit MintFinished(_token);

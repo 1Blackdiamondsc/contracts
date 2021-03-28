@@ -71,9 +71,18 @@ abstract contract ITokenStorage {
   event AuditsRemoved(address scope, uint256 scopeId);
   event SelfManaged(address indexed holder, bool active);
 
+  // ERC20
   event Minted(address indexed token, uint256 amount);
-  event MintFinished(address indexed token);
   event Burned(address indexed token, uint256 amount);
+  event Seize(address indexed token, address account, uint256 amount);
+
+  // ERC721
+  event TemplateURIUpdated(string baseURI, string suffixURI);
+  event MintedERC721(address indexed token, uint256[] tokenIds);
+  event BurnedERC721(address indexed token, uint256[] tokenIds);
+  event SeizeERC721(address indexed token, address account, uint256[] tokenIds);
+
+  event MintFinished(address indexed token);
   event RulesDefined(address indexed token, IRule[] rules);
   event LockDefined(
     address indexed lock,
@@ -82,7 +91,6 @@ abstract contract ITokenStorage {
     uint256 startAt,
     uint256 endAt
   );
-  event Seize(address indexed token, address account, uint256 amount);
   event Freeze(
     address indexed token,
     address address_,
@@ -93,8 +101,8 @@ abstract contract ITokenStorage {
   event TokenDefined(
     address indexed token,
     string name,
-    string symbol,
-    uint256 decimals);
+    string symbol);
+
   event LogTransferData(
     address token, address caller, address sender, address receiver,
     uint256 senderId, uint256[] senderKeys, bool senderFetched,

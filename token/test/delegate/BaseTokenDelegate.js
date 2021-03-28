@@ -14,12 +14,13 @@ const SYMBOL = 'TKN';
 const DECIMALS = 18;
 
 contract('BaseTokenDelegate', function (accounts) {
-  let core, delegate;
+  let core, coreAsDelegate, delegate;
 
   beforeEach(async function () {
     delegate = await MintableTokenDelegate.new();
     core = await TokenCore.new('Test', [accounts[0]]);
     await core.defineTokenDelegate(1, delegate.address, []);
+    coreAsDelegate = await MintableTokenDelegate.at(core.address);
   });
 
   it('should have no configuration requirements', async function () {
@@ -60,7 +61,7 @@ contract('BaseTokenDelegate', function (accounts) {
       const TOTAL_SUPPLY = '1000000';
 
       beforeEach(async function () {
-        await core.mint(token.address, [accounts[0]], [TOTAL_SUPPLY]);
+        await coreAsDelegate.mint(token.address, [accounts[0]], [TOTAL_SUPPLY]);
       });
 
       it('should have a total supply for token', async function () {

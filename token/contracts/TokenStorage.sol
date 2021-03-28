@@ -39,6 +39,38 @@ contract TokenStorage is ITokenStorage, OperableStorage {
     IRule[] rules;
   }
 
+  struct OwnerERC721 {
+    uint256 balance;
+    mapping (uint256 => uint256) ownedTokenIds;
+    mapping (uint256 => uint256) ownedTokenIndexes;
+  }
+
+  struct TokenDataERC721 {
+    string name;
+    string symbol;
+
+    string baseURI;
+    string suffixURI;
+
+    uint256 totalSupply;
+    mapping (uint256 => uint256) tokenIds;
+    mapping (uint256 => address) ownersAddresses;
+    mapping (address => OwnerERC721) owners;
+
+    mapping (uint256 => address) approveds;
+    mapping (address => mapping (address => bool)) operators;
+
+    bool mintingFinished;
+
+    uint256 allTimeMinted;
+    uint256 allTimeBurned;
+    uint256 allTimeSeized;
+
+    mapping (address => uint256) frozenUntils;
+    address[] locks;
+    IRule[] rules;
+  }
+
   struct AuditData {
     uint64 createdAt;
     uint64 lastTransactionAt;
@@ -69,6 +101,7 @@ contract TokenStorage is ITokenStorage, OperableStorage {
   // DelegateId => AuditConfigurationId[]
   mapping (uint256 => uint256[]) internal delegatesConfigurations_;
   mapping (address => TokenData) internal tokens;
+  mapping (address => TokenDataERC721) internal tokenERC721s;
 
   // Scope x ScopeId => AuditStorage
   mapping (address => mapping (uint256 => AuditStorage)) internal audits;

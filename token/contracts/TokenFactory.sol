@@ -6,6 +6,7 @@ import "@c-layer/common/contracts/operable/OperableAsCore.sol";
 import "@c-layer/common/contracts/interface/IERC20.sol";
 import "@c-layer/distribution/contracts/interface/IWrappedERC20.sol";
 import "./interface/ITokenCore.sol";
+import "./interface/ITokenDelegate.sol";
 import "./interface/ITokenFactory.sol";
 import "./rule/YesNoRule.sol";
 
@@ -119,20 +120,21 @@ contract TokenFactory is ITokenFactory, Factory, OperableAsCore, YesNoRule, Oper
     // Token is blocked for review and approval by core operators
     // This contract is used as a YesNo rule configured as No to prevent transfers
     // Removing this contract from the rules will unlock the token
+    ITokenDelegate coreAsDelegate = ITokenDelegate(address(_core));
     if (!_core.hasCorePrivilege(msg.sender, APPROVE_TOKEN_PRIV)) {
       IRule[] memory factoryRules = new IRule[](1);
       factoryRules[0] = IRule(address(this));
-      require(_core.defineRules(address(token), factoryRules), "TF06");
+      require(coreAsDelegate.defineRules(address(token), factoryRules), "TF06");
     }
 
     // 5- Locking the token
     address[] memory locks = new address[](1);
     locks[0] = address(token);
-    require(_core.defineTokenLocks(address(token), locks), "TF07");
+    require(coreAsDelegate.defineTokenLocks(address(token), locks), "TF07");
 
     // solhint-disable-next-line not-rely-on-time
     if (_lockEnd > block.timestamp) {
-      require(_core.defineLock(
+      require(coreAsDelegate.defineLock(
         address(token),
         ANY_ADDRESSES,
         ANY_ADDRESSES,
@@ -141,11 +143,11 @@ contract TokenFactory is ITokenFactory, Factory, OperableAsCore, YesNoRule, Oper
     }
 
     // 6- Mint the token
-    require(_core.mint(address(token), _vaults, _supplies), "TF09");
+    require(coreAsDelegate.mint(address(token), _vaults, _supplies), "TF09");
 
     // 7 - Finish the minting
     if(_finishMinting) {
-      require(_core.finishMinting(address(token)), "TF10");
+      require(coreAsDelegate.finishMinting(address(token)), "TF10");
     }
 
     emit TokenDeployed(token);
@@ -164,7 +166,8 @@ contract TokenFactory is ITokenFactory, Factory, OperableAsCore, YesNoRule, Oper
     // This ensure that the call does not change a custom made rules configuration
     (,,,,,,IRule[] memory rules) = _core.token(address(_token));
     if (rules.length == 1 && rules[0] == IRule(this)) {
-      require(_core.defineRules(address(_token), new IRule[](0)), "TF12");
+      ITokenDelegate coreAsDelegate = ITokenDelegate(address(_core));
+      require(coreAsDelegate.defineRules(address(_token), new IRule[](0)), "TF12");
     }
     emit TokenApproved(_token);
     return true;
@@ -186,7 +189,7 @@ contract TokenFactory is ITokenFactory, Factory, OperableAsCore, YesNoRule, Oper
 
     ITokenCore core;
     if (_compliance) {
-      core = ITokenCore(_token.core());
+      core = ITokenCore(payable(_token.core()));
       require(hasCoreAccess(core), "TF01");
       require(core.hasCorePrivilege(msg.sender, DEFINE_AUDIT_TRIGGERS_PRIV), "TF13");
     }
@@ -206,6 +209,8 @@ contract TokenFactory is ITokenFactory, Factory, OperableAsCore, YesNoRule, Oper
       operators[0] = address(wToken);
       require(core.assignProxyOperators(address(_token), OPERATOR_PROXY_ROLE, operators), "TF15");
 
+      ITokenDelegate coreAsDelegate = ITokenDelegate(address(core));
+
       // Avoid KYC restrictions for the wrapped tokens (AuditConfigurationId == 0)
       {
         uint256 delegateId = core.proxyDelegateId(address(_token));
@@ -223,7 +228,7 @@ contract TokenFactory is ITokenFactory, Factory, OperableAsCore, YesNoRule, Oper
           senders, receivers, modes), "TF16");
       }
 
-      require(core.defineLock(address(_token), address(this), ANY_ADDRESSES, ~uint64(0), ~uint64(0)), "TF17");
+      require(coreAsDelegate.defineLock(address(_token), address(this), ANY_ADDRESSES, ~uint64(0), ~uint64(0)), "TF17");
     } else {
       require(_token.approve(address(wToken), ~uint256(0)), "TF18");
     }
@@ -245,12 +250,13 @@ contract TokenFactory is ITokenFactory, Factory, OperableAsCore, YesNoRule, Oper
     uint256[] memory _allowances)
     override public onlyProxyOperator(Proxy(address(_token))) returns (bool)
   {
-    ITokenCore core = ITokenCore(_token.core());
+    ITokenCore core = ITokenCore(payable(_token.core()));
     require(hasCoreAccess(core), "TF01");
     require(_tokensales.length == _allowances.length, "TF20");
 
+    ITokenDelegate coreAsDelegate = ITokenDelegate(address(core));
     for(uint256 i=0; i < _tokensales.length; i++) {
-      require(core.defineLock(address(_token), _tokensales[i], ANY_ADDRESSES, ~uint64(0), ~uint64(0)), "TF21");
+      require(coreAsDelegate.defineLock(address(_token), _tokensales[i], ANY_ADDRESSES, ~uint64(0), ~uint64(0)), "TF21");
     }
 
     updateAllowances(_token, _tokensales, _allowances);

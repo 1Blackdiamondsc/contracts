@@ -1,6 +1,6 @@
 pragma solidity ^0.8.0;
 
-import "../interface/ITokenDelegate.sol";
+import "../interface/IBaseTokenDelegate.sol";
 import "./STransferData.sol";
 import "../TokenStorage.sol";
 import "../TokenProxy.sol";
@@ -19,7 +19,7 @@ import "../TokenProxy.sol";
  * TD03: Transfer event must be generated
  * TD04: Allowance limit reached
  */
-contract BaseTokenDelegate is ITokenDelegate, TokenStorage {
+contract BaseTokenDelegate is IBaseTokenDelegate, TokenStorage {
 
   function decimals() virtual override public view returns (uint256) {
     return tokens[msg.sender].decimals;

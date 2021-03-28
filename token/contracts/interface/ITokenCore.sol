@@ -14,6 +14,9 @@ import "./ITokenStorage.sol";
  **/
 abstract contract ITokenCore is ITokenStorage, IOperableCore {
 
+  receive() external virtual payable;
+  fallback() external virtual payable;
+ 
   function name() virtual public view returns (string memory);
   function oracle() virtual public view returns (
     IUserRegistry userRegistry,
@@ -55,16 +58,6 @@ abstract contract ITokenCore is ITokenStorage, IOperableCore {
   function totalSupply() virtual external returns (uint256);
   function balanceOf(address) virtual external returns (uint256);
   function allowance(address, address) virtual external returns (uint256);
-  function transfer(address, address, uint256)
-    virtual external returns (bool status);
-  function transferFrom(address, address, address, uint256)
-    virtual external returns (bool status);
-  function approve(address, address, uint256)
-    virtual external returns (bool status);
-  function increaseApproval(address, address, uint256)
-    virtual external returns (bool status);
-  function decreaseApproval(address, address, uint256)
-    virtual external returns (bool status);
 
   /***********  TOKEN DATA   ***********/
   function token(address _token) virtual external view returns (
@@ -79,25 +72,6 @@ abstract contract ITokenCore is ITokenStorage, IOperableCore {
     uint64 startAt, uint64 endAt);
   function canTransfer(address, address, uint256)
     virtual external returns (uint256);
-
-  /***********  TOKEN ADMIN  ***********/
-  function mint(address, address[] calldata, uint256[] calldata)
-    virtual external returns (bool);
-  function finishMinting(address)
-    virtual external returns (bool);
-  function burn(address, uint256)
-    virtual external returns (bool);
-  function seize(address _token, address, uint256)
-    virtual external returns (bool);
-  function defineLock(address, address, address, uint64, uint64)
-    virtual external returns (bool);
-  function defineTokenLocks(address _token, address[] memory locks)
-    virtual external returns (bool);
-  function freezeManyAddresses(
-    address _token,
-    address[] calldata _addresses,
-    uint256 _until) virtual external returns (bool);
-  function defineRules(address, IRule[] calldata) virtual external returns (bool);
 
   /************  CORE ADMIN  ************/
   function defineToken(

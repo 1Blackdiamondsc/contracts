@@ -351,7 +351,7 @@ contract VotingSessionManager is IVotingSessionManager, DelegateCallView, Voting
     require(address(_token) != address(0), "VM02");
     require(address(_delegate) != address(0), "VM03");
 
-    ITokenCore core = ITokenCore(_token.core());
+    ITokenCore core = ITokenCore(payable(_token.core()));
     require(address(core) != address(0), "VM04");
     
     if (token_ != _token || core_ != core) {

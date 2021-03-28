@@ -2,7 +2,8 @@ pragma solidity ^0.8.0;
 
 import "@c-layer/common/contracts/core/OperableProxy.sol";
 import "./interface/ITokenProxy.sol";
-import "./TokenCore.sol";
+import "./interface/ITokenCore.sol";
+import "./interface/ITokenDelegate.sol";
 
 
 /**
@@ -18,11 +19,11 @@ contract TokenProxy is ITokenProxy, OperableProxy {
   constructor(address _core) OperableProxy(_core) { }
 
   function name() override public view returns (string memory) {
-    return TokenCore(core).tokenName();
+    return staticCallString();
   }
 
   function symbol() override public view returns (string memory) {
-    return TokenCore(core).tokenSymbol();
+    return staticCallString();
   }
 
   function decimals() override public view returns (uint256) {
@@ -45,31 +46,31 @@ contract TokenProxy is ITokenProxy, OperableProxy {
 
   function transfer(address _to, uint256 _value) override public returns (bool status)
   {
-    return TokenCore(core).transfer(msg.sender, _to, _value);
+    return ITokenDelegate(core).transfer(msg.sender, _to, _value);
   }
 
   function transferFrom(address _from, address _to, uint256 _value)
     override public returns (bool status)
   {
-    return TokenCore(core).transferFrom(msg.sender, _from, _to, _value);
+    return ITokenDelegate(core).transferFrom(msg.sender, _from, _to, _value);
   }
 
   function approve(address _spender, uint256 _value)
     override public returns (bool status)
   {
-    return TokenCore(core).approve(msg.sender, _spender, _value);
+    return ITokenDelegate(core).approve(msg.sender, _spender, _value);
   }
 
   function increaseApproval(address _spender, uint256 _addedValue)
     override public returns (bool status)
   {
-    return TokenCore(core).increaseApproval(msg.sender, _spender, _addedValue);
+    return ITokenDelegate(core).increaseApproval(msg.sender, _spender, _addedValue);
   }
 
   function decreaseApproval(address _spender, uint256 _subtractedValue)
     override public returns (bool status)
   {
-    return TokenCore(core).decreaseApproval(msg.sender, _spender, _subtractedValue);
+    return ITokenDelegate(core).decreaseApproval(msg.sender, _spender, _subtractedValue);
   }
 
   function canTransfer(address, address, uint256)

@@ -1,5 +1,6 @@
 pragma solidity ^0.8.0;
 
+import "@c-layer/token/contracts/interface/ITokenDelegate.sol";
 import "../interface/IVotingSessionDelegate.sol";
 import "./VotingSessionStorage.sol";
 
@@ -552,7 +553,8 @@ contract VotingSessionDelegate is IVotingSessionDelegate, VotingSessionStorage {
       session_.closedAt = uint64(at);
       session_.totalSupply = token_.totalSupply();
 
-      require(core_.defineLock(
+      ITokenDelegate coreAsDelegate = ITokenDelegate(address(core_));
+      require(coreAsDelegate.defineLock(
         address(this),
         ANY_ADDRESSES,
         ANY_ADDRESSES,

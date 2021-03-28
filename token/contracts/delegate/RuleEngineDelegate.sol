@@ -1,6 +1,6 @@
 pragma solidity ^0.8.0;
 
-import "../interface/IRule.sol";
+import "../interface/IRuleEngineDelegate.sol";
 import "./STransferData.sol";
 import "../TokenStorage.sol";
 
@@ -14,13 +14,13 @@ import "../TokenStorage.sol";
  * @author Cyril Lapinte - <cyril.lapinte@openfiz.com>
  * SPDX-License-Identifier: MIT
  **/
-abstract contract RuleEngineDelegate is TokenStorage {
+abstract contract RuleEngineDelegate is IRuleEngineDelegate, TokenStorage {
 
   /**
    * @dev Define rules to the token
    */
   function defineRules(address _token, IRule[] memory _rules)
-    public returns (bool)
+    public override returns (bool)
   {
     tokens[_token].rules = _rules;
     emit RulesDefined(_token, _rules);

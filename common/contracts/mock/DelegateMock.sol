@@ -61,9 +61,9 @@ contract DelegateMock is Delegate {
     return _data;
   }
 
-  function delegateCallStringMock(string memory _message) public returns (bytes memory) {
+  function delegateCallStringMock(string memory _message) public returns (string memory) {
     require(bytes(_message).length > 0, "DM07");
     message = _message;
-    return abi.encode(_message);
+    return _message;
   }
 }
