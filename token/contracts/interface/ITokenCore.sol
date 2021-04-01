@@ -1,6 +1,7 @@
 pragma solidity ^0.8.0;
 
-import "@c-layer/common/contracts/interface/IOperableCore.sol";
+import "@c-layer/common/contracts/interface/ICore.sol";
+import "@c-layer/common/contracts/interface/IProxy.sol";
 import "./ITokenStorage.sol";
 
 
@@ -12,19 +13,16 @@ import "./ITokenStorage.sol";
  *
  * Error messages
  **/
-abstract contract ITokenCore is ITokenStorage, IOperableCore {
+interface ITokenCore is ITokenStorage, ICore {
 
-  receive() external virtual payable;
-  fallback() external virtual payable;
- 
-  function name() virtual public view returns (string memory);
-  function oracle() virtual public view returns (
+  function name() external view returns (string memory);
+  function oracle() external view returns (
     IUserRegistry userRegistry,
     IRatesProvider ratesProvider,
     address currency);
 
   function auditConfiguration(uint256 _configurationId)
-    virtual public view returns (
+    external view returns (
       uint256 scopeId,
       AuditTriggerMode _mode,
       uint256[] memory senderKeys,
@@ -32,63 +30,40 @@ abstract contract ITokenCore is ITokenStorage, IOperableCore {
       IRatesProvider ratesProvider,
       address currency);
   function auditTrigger(uint256 _configurationId, address _sender, address _receiver)
-    virtual public view returns (AuditTriggerMode);
+    external view returns (AuditTriggerMode);
   function delegatesConfigurations(uint256 _delegateId)
-    virtual public view returns (uint256[] memory);
+    external view returns (uint256[] memory);
 
   function auditCurrency(
     address _scope,
     uint256 _scopeId
-  ) virtual external view returns (address currency);
+  ) external view returns (address currency);
   function audit(
     address _scope,
     uint256 _scopeId,
     AuditStorageMode _storageMode,
-    bytes32 _storageId) virtual external view returns (
+    bytes32 _storageId) external view returns (
     uint64 createdAt,
     uint64 lastTransactionAt,
     uint256 cumulatedEmission,
     uint256 cumulatedReception);
 
-  /**************  ERC20  **************/
-  function tokenName() virtual external view returns (string memory);
-  function tokenSymbol() virtual external view returns (string memory);
-
-  function decimals() virtual external returns (uint256);
-  function totalSupply() virtual external returns (uint256);
-  function balanceOf(address) virtual external returns (uint256);
-  function allowance(address, address) virtual external returns (uint256);
-
-  /***********  TOKEN DATA   ***********/
-  function token(address _token) virtual external view returns (
-    bool mintingFinished,
-    uint256 allTimeMinted,
-    uint256 allTimeBurned,
-    uint256 allTimeSeized,
-    address[] memory locks,
-    uint256 freezedUntil,
-    IRule[] memory);
-  function lock(address _lock, address _sender, address _receiver) virtual external view returns (
-    uint64 startAt, uint64 endAt);
-  function canTransfer(address, address, uint256)
-    virtual external returns (uint256);
-
   /************  CORE ADMIN  ************/
   function defineToken(
-    address _token,
+    IProxy _token,
     uint256 _delegateId,
     string memory _name,
     string memory _symbol,
-    uint256 _decimals) virtual external returns (bool);
+    uint256 _decimals) external;
 
   function defineOracle(
     IUserRegistry _userRegistry,
     IRatesProvider _ratesProvider,
-    address _currency) virtual external returns (bool);
+    address _currency) external;
   function defineTokenDelegate(
     uint256 _delegateId,
     address _delegate,
-    uint256[] calldata _configurations) virtual external returns (bool);
+    uint256[] calldata _configurations) external;
   function defineAuditConfiguration(
     uint256 _configurationId,
     uint256 _scopeId,
@@ -96,17 +71,14 @@ abstract contract ITokenCore is ITokenStorage, IOperableCore {
     uint256[] calldata _senderKeys,
     uint256[] calldata _receiverKeys,
     IRatesProvider _ratesProvider,
-    address _currency) virtual external returns (bool);
-  function removeAudits(address _scope, uint256 _scopeId)
-    virtual external returns (bool);
+    address _currency) external;
+  function removeAudits(address _scope, uint256 _scopeId) external;
   function defineAuditTriggers(
     uint256 _configurationId,
     address[] calldata _senders,
     address[] calldata _receivers,
-    AuditTriggerMode[] calldata _modes) virtual external returns (bool);
+    AuditTriggerMode[] calldata _modes) external;
 
-  function isSelfManaged(address _owner)
-    virtual external view returns (bool);
-  function manageSelf(bool _active)
-    virtual external returns (bool);
+  function isSelfManaged(address _owner) external view returns (bool);
+  function manageSelf(bool _active) external;
 }

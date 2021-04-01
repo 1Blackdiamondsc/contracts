@@ -23,7 +23,7 @@ contract LockableDelegateMock is LockableDelegate, DelegateMock {
   function defineLockProxies(address[] memory _locks) public returns (bool) {
     delegates[1] = address(this);
     for(uint256 i=0; i < _locks.length; i++) {
-      proxyDelegateIds[_locks[i]] = 1;
+      proxyDelegateIds[IProxy(_locks[i])] = 1;
     }
     return true;
   }
@@ -31,7 +31,7 @@ contract LockableDelegateMock is LockableDelegate, DelegateMock {
   /**
    * @dev testIsLocked
    */
-  function testIsLocked(address _token,
+  function testIsLocked(IProxy _token,
     address _caller, address _sender, address _receiver,
     uint256 _value) public view returns (bool)
   {

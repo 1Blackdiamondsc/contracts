@@ -13,7 +13,7 @@ import "../operable/OperableAsCore.sol";
  */
 contract OperableAsCoreMock is OperableAsCore {
 
-  function testOnlyCoreOperator(IOperableCore _core)
+  function testOnlyCoreOperator(ICore _core)
     public onlyCoreOperator(_core) view returns (bool)
   {
     return true;

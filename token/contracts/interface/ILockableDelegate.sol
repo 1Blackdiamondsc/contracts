@@ -1,5 +1,7 @@
 pragma solidity ^0.8.0;
 
+import "../interface/ITokenStorage.sol";
+
 
 /**
  * @title Lockable Delegate Interface
@@ -10,14 +12,17 @@ pragma solidity ^0.8.0;
  *
  * Error messages
  */
-abstract contract ILockableDelegate {
+interface ILockableDelegate is ITokenStorage {
 
-  function defineTokenLocks(address _token, address[] memory _locks) public virtual returns (bool);
+  function lock(IProxy _lock, address _sender, address _receiver)
+    external view returns (uint64 startAt, uint64 endAt);
+
+  function defineTokenLocks(IProxy _token, address[] memory _locks) external returns (bool);
   function defineLock(
     address _lock,
     address _sender,
     address _receiver,
     uint64 _startAt,
-    uint64 _endAt) public virtual returns (bool);
+    uint64 _endAt) external returns (bool);
 
 }

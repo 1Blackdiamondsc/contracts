@@ -5,11 +5,11 @@
  */
 
 const assertGasEstimate = require('./helpers/assertGasEstimate');
-const TokenProxy = artifacts.require('TokenProxy.sol');
+const TokenERC20Proxy = artifacts.require('TokenERC20Proxy.sol');
 const TokenCore = artifacts.require('TokenCore.sol');
-const MintableTokenDelegate = artifacts.require('MintableTokenDelegate.sol');
-const KYCOnlyTokenDelegate = artifacts.require('KYCOnlyTokenDelegate.sol');
-const TokenDelegate = artifacts.require('TokenDelegate.sol');
+const MintableTokenERC20Delegate = artifacts.require('MintableTokenERC20Delegate.sol');
+const KYCOnlyTokenERC20Delegate = artifacts.require('KYCOnlyTokenERC20Delegate.sol');
+const TokenERC20Delegate = artifacts.require('TokenERC20Delegate.sol');
 
 const UserRegistryMock = artifacts.require('UserRegistryMock.sol');
 const RatesProviderMock = artifacts.require('RatesProviderMock.sol');
@@ -23,32 +23,32 @@ const CHF_ADDRESS = web3.utils.toHex('CHF').padEnd(42, '0');
 const NEXT_YEAR = Math.floor(new Date().getTime() / 1000) + (24 * 3600 * 365);
 
 // Contract Deployments Gas Cost
-const CORE_GAS_COST = 4082963;
-const MINTABLE_DELEGATE_GAS_COST = 1848231;
-const KYCONLY_DELEGATE_GAS_COST = 2860639;
-const DELEGATE_GAS_COST = 3198696;
-const PROXY_GAS_COST = 771980;
+const CORE_GAS_COST = 3712477;
+const MINTABLE_DELEGATE_GAS_COST = 1854214;
+const KYCONLY_DELEGATE_GAS_COST = 2904245;
+const DELEGATE_GAS_COST = 3237975;
+const PROXY_GAS_COST = 781814;
 
 // Contract Interactions Gas Cost
-const MINTABLE_FIRST_TRANSFER_COST = 69107;
-const MINTABLE_FIRST_TRANSFER_FROM_COST = 76896;
-const MINTABLE_TRANSFER_COST = 53572;
-const KYCONLY_FIRST_TRANSFER_COST = 80609;
-const KYCONLY_FIRST_TRANSFER_FROM_COST = 92386;
-const KYCONLY_TRANSFER_COST = 65067;
-const FIRST_TRANSFER_COST = 106202;
-const FIRST_TRANSFER_FROM_COST = 117985;
-const TRANSFER_COST = 74748;
-const ISSUANCE_AUDITED_FIRST_TRANSFER_COST = 170887;
-const ISSUANCE_AUDITED_FIRST_TRANSFER_FROM_COST = 182553;
-const ISSUANCE_AUDITED_TRANSFER_COST = 102870;
-const ISSUANCE_AUDITED_FIRST_TRANSFER_AFTER_COST = 106189;
-const ISSUANCE_AUDITED_TRANSFER_AFTER_COST = 74736;
-const AUDITED_FIRST_TRANSFER_COST = 104192;
-const AUDITED_FIRST_TRANSFER_FROM_COST = 115673;
-const AUDITED_TRANSFER_COST = 72746;
-const AUDITED_FIRST_TRANSFER_AFTER_COST = 228523;
-const AUDITED_TRANSFER_AFTER_COST = 123623;
+const MINTABLE_FIRST_TRANSFER_COST = 64022;
+const MINTABLE_FIRST_TRANSFER_FROM_COST = 76280;
+const MINTABLE_TRANSFER_COST = 48600;
+const KYCONLY_FIRST_TRANSFER_COST = 79709;
+const KYCONLY_FIRST_TRANSFER_FROM_COST = 91600;
+const KYCONLY_TRANSFER_COST = 64170;
+const FIRST_TRANSFER_COST = 105256;
+const FIRST_TRANSFER_FROM_COST = 116898;
+const TRANSFER_COST = 74085;
+const ISSUANCE_AUDITED_FIRST_TRANSFER_COST = 169950;
+const ISSUANCE_AUDITED_FIRST_TRANSFER_FROM_COST = 181533;
+const ISSUANCE_AUDITED_TRANSFER_COST = 101938;
+const ISSUANCE_AUDITED_FIRST_TRANSFER_AFTER_COST = 105244;
+const ISSUANCE_AUDITED_TRANSFER_AFTER_COST = 74072;
+const AUDITED_FIRST_TRANSFER_COST = 103247;
+const AUDITED_FIRST_TRANSFER_FROM_COST = 115336;
+const AUDITED_TRANSFER_COST = 72075;
+const AUDITED_FIRST_TRANSFER_AFTER_COST = 227650;
+const AUDITED_TRANSFER_AFTER_COST = 122755;
 
 const AUDIT_NONE = 1;
 const AUDIT_RECEIVER_ONLY = 3;
@@ -74,32 +74,32 @@ contract('Performance [ @skip-on-coverage ]', function (accounts) {
   });
 
   it('should have a mintable delegate gas cost at ' + MINTABLE_DELEGATE_GAS_COST, async function () {
-    const gas = await MintableTokenDelegate.new.estimateGas();
+    const gas = await MintableTokenERC20Delegate.new.estimateGas();
     assertGasEstimate(gas, MINTABLE_DELEGATE_GAS_COST, 'gas');
   });
 
   it('should have a KYCOnly delegate gas cost at ' + KYCONLY_DELEGATE_GAS_COST, async function () {
-    const gas = await KYCOnlyTokenDelegate.new.estimateGas();
+    const gas = await KYCOnlyTokenERC20Delegate.new.estimateGas();
     assertGasEstimate(gas, KYCONLY_DELEGATE_GAS_COST, 'gas');
   });
 
   it('should have a compliant delegate gas cost at ' + DELEGATE_GAS_COST, async function () {
-    const gas = await TokenDelegate.new.estimateGas();
+    const gas = await TokenERC20Delegate.new.estimateGas();
     assertGasEstimate(gas, DELEGATE_GAS_COST, 'gas');
   });
 
   it('should have a proxy gas cost at ' + PROXY_GAS_COST, async function () {
     core = await TokenCore.new('Test', [accounts[0]]);
-    const gas = await TokenProxy.new.estimateGas(core.address);
+    const gas = await TokenERC20Proxy.new.estimateGas(core.address);
     assertGasEstimate(gas, PROXY_GAS_COST, 'gas');
   });
 
   describe('With delegates defined', function () {
-    let delegates, token;
+    let delegates, coreAsDelegate, token;
 
     beforeEach(async function () {
       delegates = await Promise.all([
-        MintableTokenDelegate.new(), TokenDelegate.new(), KYCOnlyTokenDelegate.new(),
+        MintableTokenERC20Delegate.new(), TokenERC20Delegate.new(), KYCOnlyTokenERC20Delegate.new(),
       ]);
       core = await TokenCore.new('Test', [accounts[0]]);
 
@@ -107,14 +107,16 @@ contract('Performance [ @skip-on-coverage ]', function (accounts) {
       await core.defineTokenDelegate(2, delegates[1].address, [2]);
       await core.defineTokenDelegate(3, delegates[2].address, [0]);
       await core.defineOracle(userRegistry.address, ratesProvider.address, CHF_ADDRESS);
+
+      coreAsDelegate = await TokenERC20Delegate.at(core.address);
     });
 
     describe('With a mintable token defined', function () {
       beforeEach(async function () {
-        token = await TokenProxy.new(core.address);
+        token = await TokenERC20Proxy.new(core.address);
         await core.defineToken(
           token.address, 1, NAME, SYMBOL, DECIMALS);
-        await core.mint(token.address, [accounts[0]], [TOTAL_SUPPLY]);
+        await coreAsDelegate.mint(token.address, [accounts[0]], [TOTAL_SUPPLY]);
         await token.transfer(token.address, '3333');
         await token.approve(accounts[1], '3333');
       });
@@ -139,10 +141,10 @@ contract('Performance [ @skip-on-coverage ]', function (accounts) {
 
     describe('With a KYCOnly token defined', function () {
       beforeEach(async function () {
-        token = await TokenProxy.new(core.address);
+        token = await TokenERC20Proxy.new(core.address);
         await core.defineToken(
           token.address, 3, NAME, SYMBOL, DECIMALS);
-        await core.mint(token.address, [accounts[0]], [TOTAL_SUPPLY]);
+        await coreAsDelegate.mint(token.address, [accounts[0]], [TOTAL_SUPPLY]);
         await token.transfer(accounts[3], '3333');
         await token.approve(accounts[1], '3333');
       });
@@ -167,13 +169,13 @@ contract('Performance [ @skip-on-coverage ]', function (accounts) {
 
     describe('With a compliant token defined', function () {
       beforeEach(async function () {
-        token = await TokenProxy.new(core.address);
+        token = await TokenERC20Proxy.new(core.address);
         await ratesProvider.defineCurrencies([CHF_BYTES, token.address],
           ['0', '0'], '100');
         await ratesProvider.defineRates(['150']);
         await core.defineToken(
           token.address, 2, NAME, SYMBOL, DECIMALS);
-        await core.mint(token.address, [accounts[0]], [TOTAL_SUPPLY]);
+        await coreAsDelegate.mint(token.address, [accounts[0]], [TOTAL_SUPPLY]);
         await token.approve(accounts[1], '3333');
       });
 

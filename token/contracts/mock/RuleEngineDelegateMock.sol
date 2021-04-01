@@ -19,7 +19,7 @@ contract RuleEngineDelegateMock is RuleEngineDelegate, DelegateMock {
   /**
    * @dev testAreTransferRulesValid
    */
-  function testAreTransferRulesValid(address _token,
+  function testAreTransferRulesValid(IProxy _token,
     address _caller, address _sender, address _receiver,
     uint256 _value) public view returns (bool)
   {

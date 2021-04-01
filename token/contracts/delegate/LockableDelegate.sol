@@ -20,16 +20,27 @@ import "../TokenStorage.sol";
 abstract contract LockableDelegate is ILockableDelegate, TokenStorage {
 
   /**
+   * @dev lock
+   */
+  function lock(IProxy _lock, address _sender, address _receiver) override external view returns (
+    uint64 startAt, uint64 endAt)
+  {
+    LockData storage lockData_ = locks[address(_lock)][_sender][_receiver];
+    return (lockData_.startAt, lockData_.endAt);
+  }
+
+
+  /**
    * @dev define token lock
    */
-  function defineTokenLocks(address _token, address[] memory _locks) public override returns (bool)
+  function defineTokenLocks(IProxy _token, address[] memory _locks) public override returns (bool)
   {
     for(uint256 i=0; i < _locks.length; i++) {
-      require(delegates[proxyDelegateIds[_locks[i]]] != address(0), "LD01");
+      require(delegates[proxyDelegateIds[IProxy(_locks[i])]] != address(0), "LD01");
     }
 
     tokens[_token].locks = _locks;
-    emit TokenLocksDefined(_token, _locks);
+    emit TokenLocksDefinition(_token, _locks);
     return true;
   }
 
@@ -45,7 +56,7 @@ abstract contract LockableDelegate is ILockableDelegate, TokenStorage {
   {
     require(_startAt <= _endAt, "LD02");
     locks[_lock][_sender][_receiver] = LockData(_startAt, _endAt);
-    emit LockDefined(_lock, _sender, _receiver, _startAt, _endAt);
+    emit LockDefinition(_lock, _sender, _receiver, _startAt, _endAt);
     return true;
   }
 

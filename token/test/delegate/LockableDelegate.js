@@ -31,7 +31,7 @@ contract('LockableDelegate', function (accounts) {
     const tx = await delegate.defineTokenLocks(TOKEN_ADDRESS, [TOKEN_ADDRESS]);
     assert.ok(tx.receipt.status, 'Status');
     assert.equal(tx.logs.length, 1);
-    assert.equal(tx.logs[0].event, 'TokenLocksDefined', 'event');
+    assert.equal(tx.logs[0].event, 'TokenLocksDefinition', 'event');
     assert.equal(tx.logs[0].args.token, TOKEN_ADDRESS, 'token');
     assert.deepEqual(tx.logs[0].args.locks, [TOKEN_ADDRESS], 'locks');
   });
@@ -41,7 +41,7 @@ contract('LockableDelegate', function (accounts) {
       TOKEN_ADDRESS, ANY_ADDRESSES, ANY_ADDRESSES, PREVIOUS_YEAR, NEXT_YEAR);
     assert.ok(tx.receipt.status, 'Status');
     assert.equal(tx.logs.length, 1);
-    assert.equal(tx.logs[0].event, 'LockDefined', 'event');
+    assert.equal(tx.logs[0].event, 'LockDefinition', 'event');
     assert.equal(tx.logs[0].args.lock, TOKEN_ADDRESS, 'lock');
     assert.equal(tx.logs[0].args.startAt, PREVIOUS_YEAR, 'startAt');
     assert.equal(tx.logs[0].args.endAt, NEXT_YEAR, 'endAt');
@@ -65,7 +65,7 @@ contract('LockableDelegate', function (accounts) {
         TOKEN_ADDRESS, ANY_ADDRESSES, ANY_ADDRESSES, NEXT_YEAR, NEXT_YEAR + 1);
       assert.ok(tx.receipt.status, 'Status');
       assert.equal(tx.logs.length, 1);
-      assert.equal(tx.logs[0].event, 'LockDefined', 'event');
+      assert.equal(tx.logs[0].event, 'LockDefinition', 'event');
       assert.equal(tx.logs[0].args.lock, TOKEN_ADDRESS, 'lock');
       assert.equal(tx.logs[0].args.startAt, NEXT_YEAR, 'startAt');
       assert.equal(tx.logs[0].args.endAt, NEXT_YEAR + 1, 'endAt');
@@ -107,7 +107,7 @@ contract('LockableDelegate', function (accounts) {
       const tx = await delegate.defineLock(TOKEN_ADDRESS, ANY_ADDRESSES, ANY_ADDRESSES, 0, 0);
       assert.ok(tx.receipt.status, 'Status');
       assert.equal(tx.logs.length, 1);
-      assert.equal(tx.logs[0].event, 'LockDefined', 'event');
+      assert.equal(tx.logs[0].event, 'LockDefinition', 'event');
       assert.equal(tx.logs[0].args.lock, TOKEN_ADDRESS, 'lock');
       assert.equal(tx.logs[0].args.startAt, 0, 'startAt');
       assert.equal(tx.logs[0].args.endAt, 0, 'endAt');
@@ -142,7 +142,7 @@ contract('LockableDelegate', function (accounts) {
       const tx = await delegate.defineLock(TOKEN_ADDRESS, ANY_ADDRESSES, ANY_ADDRESSES, 0, 0);
       assert.ok(tx.receipt.status, 'Status');
       assert.equal(tx.logs.length, 1);
-      assert.equal(tx.logs[0].event, 'LockDefined', 'event');
+      assert.equal(tx.logs[0].event, 'LockDefinition', 'event');
       assert.equal(tx.logs[0].args.lock, TOKEN_ADDRESS, 'lock');
       assert.equal(tx.logs[0].args.startAt, 0, 'startAt');
       assert.equal(tx.logs[0].args.endAt, 0, 'endAt');
@@ -199,7 +199,7 @@ contract('LockableDelegate', function (accounts) {
       const tx = await delegate.defineLock(accounts[0], ANY_ADDRESSES, ANY_ADDRESSES, 0, 0);
       assert.ok(tx.receipt.status, 'Status');
       assert.equal(tx.logs.length, 1);
-      assert.equal(tx.logs[0].event, 'LockDefined', 'event');
+      assert.equal(tx.logs[0].event, 'LockDefinition', 'event');
       assert.equal(tx.logs[0].args.lock, accounts[0], 'lock');
       assert.equal(tx.logs[0].args.startAt, 0, 'startAt');
       assert.equal(tx.logs[0].args.endAt, 0, 'endAt');

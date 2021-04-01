@@ -80,7 +80,7 @@ contract OracleEnrichedDelegate is TokenStorage {
     STransferAuditData memory _transferAuditData) internal view
   {
     if (_transferData.convertedValue == 0 && _transferData.value != 0) {
-      address currencyFrom = _transferData.token;
+      address currencyFrom = address(_transferData.token);
       _transferData.convertedValue = (
          _transferAuditData.currency != address(0) && currencyFrom != _transferAuditData.currency
       ) ? _transferAuditData.ratesProvider.convert(_transferData.value,

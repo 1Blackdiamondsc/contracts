@@ -1,7 +1,6 @@
 pragma solidity ^0.8.0;
 
-import "./IVotingDefinitions.sol";
-import "@c-layer/token/contracts/interface/ITokenProxy.sol";
+import "@c-layer/token/contracts/interface/ITokenERC20Proxy.sol";
 import "@c-layer/token/contracts/interface/ITokenCore.sol";
 
 
@@ -13,9 +12,33 @@ import "@c-layer/token/contracts/interface/ITokenCore.sol";
  *
  * Error messages
  */
-abstract contract IVotingSessionStorage is IVotingDefinitions {
+interface IVotingSessionStorage {
 
-  event SessionRuleUpdated(
+  enum SessionState {
+    UNDEFINED,
+    PLANNED,
+    CAMPAIGN,
+    VOTING,
+    EXECUTION,
+    GRACE,
+    CLOSED,
+    ARCHIVED
+  }
+
+  enum ProposalState {
+    UNDEFINED,
+    DEFINED,
+    CANCELLED,
+    LOCKED,
+    APPROVED,
+    REJECTED,
+    RESOLVED,
+    CLOSED,
+    ARCHIVED
+  }
+
+
+  event SessionRuleUpdate(
     uint64 campaignPeriod,
     uint64 votingPeriod,
     uint64 executionPeriod,
@@ -26,7 +49,7 @@ abstract contract IVotingSessionStorage is IVotingDefinitions {
     uint8 maxProposalsOperator,
     uint256 newProposalThreshold,
     address[] nonVotingAddresses);
-  event ResolutionRequirementUpdated(
+  event ResolutionRequirementUpdate(
     address target,
     bytes4 methodSignature,
     uint128 majority,
@@ -34,17 +57,17 @@ abstract contract IVotingSessionStorage is IVotingDefinitions {
     uint256 executionThreshold
   );
 
-  event TokenDefined(address token, address core);
-  event DelegateDefined(address delegate);
+  event TokenDefinition(address token, address core);
+  event DelegateDefinition(address delegate);
 
-  event SponsorDefined(address indexed voter, address address_, uint64 until);
+  event SponsorDefinition(address indexed voter, address address_, uint64 until);
 
   event SessionScheduled(uint256 indexed sessionId, uint64 voteAt);
   event SessionArchived(uint256 indexed sessionId);
-  event ProposalDefined(uint256 indexed sessionId, uint8 proposalId);
-  event ProposalUpdated(uint256 indexed sessionId, uint8 proposalId);
+  event ProposalDefinition(uint256 indexed sessionId, uint8 proposalId);
+  event ProposalUpdate(uint256 indexed sessionId, uint8 proposalId);
   event ProposalCancelled(uint256 indexed sessionId, uint8 proposalId);
-  event ResolutionExecuted(uint256 indexed sessionId, uint8 proposalId);
+  event ResolutionExecution(uint256 indexed sessionId, uint8 proposalId);
 
   event Vote(uint256 indexed sessionId, address voter, uint256 weight);
 }

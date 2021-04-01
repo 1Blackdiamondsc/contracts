@@ -1,8 +1,10 @@
 pragma solidity ^0.8.0;
 
 import "@c-layer/common/contracts/core/OperableStorage.sol";
+import "@c-layer/common/contracts/interface/IProxy.sol";
 import "./interface/IRule.sol";
 import "./interface/ITokenStorage.sol";
+import "./TokenAccessDefinitions.sol";
 
 
 /**
@@ -12,7 +14,7 @@ import "./interface/ITokenStorage.sol";
  * @author Cyril Lapinte - <cyril.lapinte@openfiz.com>
  * SPDX-License-Identifier: MIT
  */
-contract TokenStorage is ITokenStorage, OperableStorage {
+contract TokenStorage is ITokenStorage, OperableStorage, TokenAccessDefinitions {
 
   struct LockData {
     uint64 startAt;
@@ -26,10 +28,8 @@ contract TokenStorage is ITokenStorage, OperableStorage {
 
     uint256 totalSupply;
     mapping (address => uint256) balances;
-    mapping (address => mapping (address => uint256)) allowances;
 
     bool mintingFinished;
-
     uint256 allTimeMinted;
     uint256 allTimeBurned;
     uint256 allTimeSeized;
@@ -37,38 +37,30 @@ contract TokenStorage is ITokenStorage, OperableStorage {
     mapping (address => uint256) frozenUntils;
     address[] locks;
     IRule[] rules;
+
+    TokenDataERC20 erc20;
+    TokenDataERC721 erc721;
+  }
+
+  struct TokenDataERC20 {
+    mapping (address => mapping (address => uint256)) allowances;
   }
 
   struct OwnerERC721 {
-    uint256 balance;
     mapping (uint256 => uint256) ownedTokenIds;
     mapping (uint256 => uint256) ownedTokenIndexes;
   }
 
   struct TokenDataERC721 {
-    string name;
-    string symbol;
-
     string baseURI;
     string suffixURI;
 
-    uint256 totalSupply;
     mapping (uint256 => uint256) tokenIds;
     mapping (uint256 => address) ownersAddresses;
     mapping (address => OwnerERC721) owners;
 
     mapping (uint256 => address) approveds;
     mapping (address => mapping (address => bool)) operators;
-
-    bool mintingFinished;
-
-    uint256 allTimeMinted;
-    uint256 allTimeBurned;
-    uint256 allTimeSeized;
-
-    mapping (address => uint256) frozenUntils;
-    address[] locks;
-    IRule[] rules;
   }
 
   struct AuditData {
@@ -100,8 +92,7 @@ contract TokenStorage is ITokenStorage, OperableStorage {
   mapping (uint256 => AuditConfiguration) internal auditConfigurations;
   // DelegateId => AuditConfigurationId[]
   mapping (uint256 => uint256[]) internal delegatesConfigurations_;
-  mapping (address => TokenData) internal tokens;
-  mapping (address => TokenDataERC721) internal tokenERC721s;
+  mapping (IProxy => TokenData) internal tokens;
 
   // Scope x ScopeId => AuditStorage
   mapping (address => mapping (uint256 => AuditStorage)) internal audits;
@@ -109,7 +100,7 @@ contract TokenStorage is ITokenStorage, OperableStorage {
   // Prevents operator to act on behalf
   mapping (address => bool) internal selfManaged;
 
-  // Proxy x Sender x Receiver x LockData
+  // Scope x Sender x Receiver x LockData
   mapping (address => mapping (address => mapping(address => LockData))) internal locks;
 
   IUserRegistry internal userRegistry_;

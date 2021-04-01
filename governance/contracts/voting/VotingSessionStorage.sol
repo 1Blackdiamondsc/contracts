@@ -2,6 +2,7 @@ pragma solidity ^0.8.0;
 
 import "../interface/IVotingSessionStorage.sol";
 import "../interface/IVotingSessionDelegate.sol";
+import "./VotingDefinitions.sol";
 
 
 /**
@@ -12,9 +13,7 @@ import "../interface/IVotingSessionDelegate.sol";
  *
  * Error messages
  */
-contract VotingSessionStorage is IVotingSessionStorage {
-
-  address internal constant ANY_ADDRESSES = address(0x416e79416464726573736573); // "AnyAddresses"
+contract VotingSessionStorage is IVotingSessionStorage, VotingDefinitions {
 
   struct SessionRule {
     uint64 campaignPeriod; // Before it starts, the vote will be locked
@@ -78,7 +77,7 @@ contract VotingSessionStorage is IVotingSessionStorage {
   }
 
   IVotingSessionDelegate internal delegate_;
-  ITokenProxy internal token_;
+  ITokenERC20Proxy internal token_;
   ITokenCore internal core_;
 
   SessionRule internal sessionRule_ = SessionRule(

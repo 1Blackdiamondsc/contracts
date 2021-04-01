@@ -26,7 +26,7 @@ contract OracleEnrichedDelegateMock is OracleEnrichedDelegate, DelegateMock {
     public returns (bool)
   {
     STransferData memory transferData_ = transferData(
-      address(0), address(0), _sender, address(0), 0);
+      IProxy(address(0)), address(0), _sender, address(0), 0);
 
     super.fetchSenderUserId(transferData_);
     logTransferData(transferData_);
@@ -40,7 +40,7 @@ contract OracleEnrichedDelegateMock is OracleEnrichedDelegate, DelegateMock {
     public returns (bool)
   {
     STransferData memory transferData_ = transferData(
-      address(0), address(0), _sender, address(0), 0);
+      IProxy(address(0)), address(0), _sender, address(0), 0);
     STransferAuditData memory transferAuditData_ =
       STransferAuditData(AUDIT_CONFIGURATION_DEFAULT, 0,
         address(0), IRatesProvider(address(0)),
@@ -62,7 +62,7 @@ contract OracleEnrichedDelegateMock is OracleEnrichedDelegate, DelegateMock {
     public returns (bool)
   {
     STransferData memory transferData_ = transferData(
-      address(0), address(0), address(0), _receiver, 0);
+      IProxy(address(0)), address(0), address(0), _receiver, 0);
 
     super.fetchReceiverUserId(transferData_);
     logTransferData(transferData_);
@@ -76,7 +76,7 @@ contract OracleEnrichedDelegateMock is OracleEnrichedDelegate, DelegateMock {
     public returns (bool)
   {
     STransferData memory transferData_ = transferData(
-      address(0), address(0), address(0), _receiver, 0);
+      IProxy(address(0)), address(0), address(0), _receiver, 0);
     STransferAuditData memory transferAuditData_ =
       STransferAuditData(AUDIT_CONFIGURATION_DEFAULT, 0,
         address(0), IRatesProvider(address(0)),
@@ -96,7 +96,7 @@ contract OracleEnrichedDelegateMock is OracleEnrichedDelegate, DelegateMock {
    */
   function testFetchConvertedValue(
     uint256 _value, IRatesProvider _ratesProvider,
-    address _token, address _currencyTo)
+    IProxy _token, address _currencyTo)
     public returns (bool)
   {
     STransferData memory transferData_ = transferData(

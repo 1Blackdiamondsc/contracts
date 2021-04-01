@@ -57,9 +57,9 @@ contract AuditableDelegate is OracleEnrichedDelegate {
     STransferAuditData memory _transferAuditData) internal returns (bool)
   {
     uint64 transactionAt = currentTime();
-    audits[_transferData.token][uint256(Scope.DEFAULT)
+    audits[address(_transferData.token)][uint256(Scope.DEFAULT)
       ].addressData[_transferData.sender].lastTransactionAt = transactionAt;
-    audits[_transferData.token][uint256(Scope.DEFAULT)
+    audits[address(_transferData.token)][uint256(Scope.DEFAULT)
       ].addressData[_transferData.sender].lastTransactionAt = transactionAt;
 
     if (_transferAuditData.senderAuditRequired || _transferAuditData.receiverAuditRequired) {

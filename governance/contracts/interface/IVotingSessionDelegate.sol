@@ -11,20 +11,20 @@ import "./IVotingSessionStorage.sol";
  *
  * Error messages
  */
-abstract contract IVotingSessionDelegate is IVotingSessionStorage {
+interface IVotingSessionDelegate is IVotingSessionStorage {
 
-  function nextSessionAt(uint256 _time) virtual public view returns (uint256 at);
+  function nextSessionAt(uint256 _time) external view returns (uint256 at);
 
-  function sessionStateAt(uint256 _sessionId, uint256 _time) virtual public view returns (SessionState);
+  function sessionStateAt(uint256 _sessionId, uint256 _time) external view returns (SessionState);
 
   function newProposalThresholdAt(uint256 _sessionId, uint256 _proposalsCount)
-    virtual public view returns (uint256);
+    external view returns (uint256);
 
   function proposalApproval(uint256 _sessionId, uint8 _proposalId)
-    virtual public view returns (bool);
+    external view returns (bool);
 
   function proposalStateAt(uint256 _sessionId, uint8 _proposalId, uint256 _time)
-    virtual public view returns (ProposalState);
+    external view returns (ProposalState);
 
   function updateSessionRule(
     uint64 _campaignPeriod,
@@ -37,7 +37,7 @@ abstract contract IVotingSessionDelegate is IVotingSessionStorage {
     uint8 _maxProposalsQuaestor,
     uint256 _newProposalThreshold,
     address[] memory _nonVotingAddresses
-  ) virtual public returns (bool);
+  ) external;
 
   function updateResolutionRequirements(
     address[] memory _targets,
@@ -45,7 +45,7 @@ abstract contract IVotingSessionDelegate is IVotingSessionStorage {
     uint128[] memory _majority,
     uint128[] memory _quorum,
     uint256[] memory _executionThreshold
-  ) virtual public returns (bool);
+  ) external;
 
   function defineProposal(
     string memory _name,
@@ -55,7 +55,7 @@ abstract contract IVotingSessionDelegate is IVotingSessionStorage {
     bytes memory _resolutionAction,
     uint8 _dependsOn,
     uint8 _alternativeOf
-  ) virtual public returns (bool);
+  ) external;
 
   function updateProposal(
     uint8 _proposalId,
@@ -66,17 +66,15 @@ abstract contract IVotingSessionDelegate is IVotingSessionStorage {
     bytes memory _resolutionAction,
     uint8 _dependsOn,
     uint8 _alternativeOf
-  ) virtual public returns (bool);
-  function cancelProposal(uint8 _proposalId) virtual public returns (bool);
+  ) external;
+  function cancelProposal(uint8 _proposalId) external;
 
-  function submitVote(uint256 _votes) virtual public returns (bool);
+  function submitVote(uint256 _votes) external;
   function submitVotesOnBehalf(
     address[] memory _voters,
     uint256 _votes
-  ) virtual public returns (bool);
+  ) external;
 
-  function executeResolutions(uint8[] memory _proposalIds) virtual public returns (bool);
-
-  function archiveSession() virtual public returns (bool);
-
+  function executeResolutions(uint8[] memory _proposalIds) external;
+  function archiveSession() external;
 }

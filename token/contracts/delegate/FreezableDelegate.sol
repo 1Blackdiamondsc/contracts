@@ -2,6 +2,7 @@ pragma solidity ^0.8.0;
 
 import "./STransferData.sol";
 import "../TokenStorage.sol";
+import "../interface/IFreezableDelegate.sol";
 
 
 /**
@@ -15,7 +16,7 @@ import "../TokenStorage.sol";
  * Error messages
  * FTD01: The address is frozen
  */
-abstract contract FreezableDelegate is TokenStorage {
+abstract contract FreezableDelegate is IFreezableDelegate, TokenStorage {
 
   /**
    * @dev allow owner to freeze several addresses
@@ -23,9 +24,9 @@ abstract contract FreezableDelegate is TokenStorage {
    * otherwise infinity can be used
    */
   function freezeManyAddresses(
-    address _token,
+    IProxy _token,
     address[] memory _addresses,
-    uint256 _until) public returns (bool)
+    uint256 _until) external override returns (bool)
   {
     mapping(address => uint256) storage frozenUntils = tokens[_token].frozenUntils;
     for (uint256 i = 0; i < _addresses.length; i++) {

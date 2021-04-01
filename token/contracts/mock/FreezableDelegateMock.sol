@@ -20,7 +20,7 @@ contract FreezableDelegateMock is FreezableDelegate, DelegateMock {
   /**
    * @dev testIsFrozen
    */
-  function testIsFrozen(address _token,
+  function testIsFrozen(IProxy _token,
     address _caller, address _sender, address _receiver,
     uint256 _value) public view returns (bool)
   {

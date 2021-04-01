@@ -5,8 +5,8 @@
  */
 
 const assertRevert = require('../helpers/assertRevert');
-const TokenProxy = artifacts.require('mock/TokenProxyMock.sol');
-const TokenDelegate = artifacts.require('mock/TokenDelegateMock.sol');
+const TokenERC20Proxy = artifacts.require('mock/TokenERC20ProxyMock.sol');
+const TokenERC20Delegate = artifacts.require('mock/TokenERC20DelegateMock.sol');
 const TokenCore = artifacts.require('mock/TokenCoreMock.sol');
 const VotingSessionDelegate = artifacts.require('voting/VotingSessionDelegate.sol');
 const VotingSessionManagerMock = artifacts.require('mock/VotingSessionManagerMock.sol');
@@ -74,7 +74,7 @@ const ProposalState = {
 };
 
 contract('VotingSessionManager', function (accounts) {
-  let core, delegate, token, votingSession, votingDelegate, signatures;
+  let core, coreAsDelegate, delegate, token, votingSession, votingDelegate, signatures;
 
   const recipients = [accounts[0], accounts[1], accounts[2], accounts[3], accounts[5], accounts[6]];
   const supplies = ['100', '3500000', '1500000', '2000000', '1', '1000000'];
@@ -85,14 +85,15 @@ contract('VotingSessionManager', function (accounts) {
   const proposalUrl = 'http://url.url';
 
   before(async function () {
-    delegate = await TokenDelegate.new();
+    delegate = await TokenERC20Delegate.new();
     core = await TokenCore.new('Test', [accounts[0], accounts[4]]);
+    coreAsDelegate = await TokenERC20Delegate.at(core.address);
     await core.defineTokenDelegate(1, delegate.address, [0, 1]);
     await core.manageSelf(true, { from: accounts[5] });
-    token = await TokenProxy.new(core.address);
+    token = await TokenERC20Proxy.new(core.address);
     await core.defineToken(
       token.address, 1, NAME, SYMBOL, DECIMALS);
-    await core.mint(token.address, recipients, supplies);
+    await coreAsDelegate.mint(token.address, recipients, supplies);
 
     votingDelegate = await VotingSessionDelegate.new();
   });
@@ -101,7 +102,7 @@ contract('VotingSessionManager', function (accounts) {
     votingSession = await VotingSessionManagerMock.new(token.address, votingDelegate.address);
 
     await core.defineProxy(votingSession.address, 1);
-    await core.defineTokenLocks(token.address, [token.address, votingSession.address]);
+    await coreAsDelegate.defineTokenLocks(token.address, [token.address, votingSession.address]);
     await core.assignProxyOperators(votingSession.address, ALL_PRIVILEGES, [votingSession.address]);
 
     // defineLock
@@ -200,7 +201,7 @@ contract('VotingSessionManager', function (accounts) {
     const tx = await votingSession.defineSponsor(accounts[0], Times.closed, { from: accounts[1] });
     assert.ok(tx.receipt.status, 'Status');
     assert.equal(tx.logs.length, 1);
-    assert.equal(tx.logs[0].event, 'SponsorDefined', 'event');
+    assert.equal(tx.logs[0].event, 'SponsorDefinition', 'event');
     assert.equal(tx.logs[0].args.voter, accounts[1], 'voter');
     assert.equal(tx.logs[0].args.address_, accounts[0], 'address');
     assert.equal(tx.logs[0].args.until, Times.closed, 'until');
@@ -221,7 +222,7 @@ contract('VotingSessionManager', function (accounts) {
     const tx = await votingSession.defineSponsorOf(ownable.address, accounts[2], Times.closed);
     assert.ok(tx.receipt.status, 'Status');
     assert.equal(tx.logs.length, 1);
-    assert.equal(tx.logs[0].event, 'SponsorDefined', 'event');
+    assert.equal(tx.logs[0].event, 'SponsorDefinition', 'event');
     assert.equal(tx.logs[0].args.voter, ownable.address, 'voter');
     assert.equal(tx.logs[0].args.address_, accounts[2], 'address');
     assert.equal(tx.logs[0].args.until, Times.closed, 'until');
@@ -296,7 +297,7 @@ contract('VotingSessionManager', function (accounts) {
     assert.equal(tx.logs[0].event, 'SessionScheduled', 'event');
     assert.equal(tx.logs[0].args.sessionId.toString(), '1', 'session id');
     assert.equal(tx.logs[0].args.voteAt.toString(), NEXT_VOTE_AT, 'voteAt');
-    assert.equal(tx.logs[1].event, 'ProposalDefined', 'event');
+    assert.equal(tx.logs[1].event, 'ProposalDefinition', 'event');
     assert.equal(tx.logs[1].args.sessionId.toString(), '1', 'session id');
     assert.equal(tx.logs[1].args.proposalId.toString(), '1', 'proposalId');
   });
@@ -315,7 +316,7 @@ contract('VotingSessionManager', function (accounts) {
     assert.equal(tx.logs[0].event, 'SessionScheduled', 'event');
     assert.equal(tx.logs[0].args.sessionId.toString(), '1', 'session id');
     assert.equal(tx.logs[0].args.voteAt.toString(), NEXT_VOTE_AT, 'voteAt');
-    assert.equal(tx.logs[1].event, 'ProposalDefined', 'event');
+    assert.equal(tx.logs[1].event, 'ProposalDefinition', 'event');
     assert.equal(tx.logs[1].args.sessionId.toString(), '1', 'session id');
     assert.equal(tx.logs[1].args.proposalId.toString(), '1', 'proposalId');
   });
@@ -334,7 +335,7 @@ contract('VotingSessionManager', function (accounts) {
   });
 
   it('should prevent anyone to define contracts with null core', async function () {
-    const proxy = await TokenProxy.new(NULL_ADDRESS);
+    const proxy = await TokenERC20Proxy.new(NULL_ADDRESS);
     await assertRevert(votingSession.defineContracts(proxy.address, votingDelegate.address), 'VM04');
   });
 
@@ -347,20 +348,20 @@ contract('VotingSessionManager', function (accounts) {
   it('should let migrate new contracts with different contracts same core', async function () {
     const votingSession2 = await VotingSessionManagerMock.new(token.address, votingDelegate.address);
     const votingDelegate2 = await VotingSessionDelegate.new();
-    const token2 = await TokenProxy.new(core.address);
+    const token2 = await TokenERC20Proxy.new(core.address);
 
     const tx = await votingSession2.defineContracts(token2.address, votingDelegate2.address);
     assert.ok(tx.receipt.status, 'Status');
     assert.equal(tx.logs.length, 2);
-    assert.equal(tx.logs[0].event, 'TokenDefined', 'event');
+    assert.equal(tx.logs[0].event, 'TokenDefinition', 'event');
     assert.equal(tx.logs[0].args.token, token2.address, 'token');
     assert.equal(tx.logs[0].args.core, core.address, 'core');
-    assert.equal(tx.logs[1].event, 'DelegateDefined', 'event');
+    assert.equal(tx.logs[1].event, 'DelegateDefinition', 'event');
     assert.equal(tx.logs[1].args.delegate.toString(), votingDelegate2.address, 'delegate');
   });
 
   it('should let migrate new contracts with same contracts different core', async function () {
-    const token2 = await TokenProxy.new(core.address);
+    const token2 = await TokenERC20Proxy.new(core.address);
     await core.defineToken(
       token2.address, 1, NAME, SYMBOL, DECIMALS);
     const votingSession2 = await VotingSessionManagerMock.new(token2.address, votingDelegate.address);
@@ -373,7 +374,7 @@ contract('VotingSessionManager', function (accounts) {
     const tx = await votingSession2.defineContracts(token2.address, votingDelegate.address);
     assert.ok(tx.receipt.status, 'Status');
     assert.equal(tx.logs.length, 1);
-    assert.equal(tx.logs[0].event, 'TokenDefined', 'event');
+    assert.equal(tx.logs[0].event, 'TokenDefinition', 'event');
     assert.equal(tx.logs[0].args.token, token2.address, 'token');
     assert.equal(tx.logs[0].args.core, core2.address, 'core');
   });
@@ -1139,7 +1140,7 @@ contract('VotingSessionManager', function (accounts) {
         // May depends on the current date
         // assert.equal(tx.logs[0].args.voteAt.toString(),
         //   NEXT_VOTE_AT + DEFAULT_PERIOD_LENGTH, 'voteAt');
-        assert.equal(tx.logs[1].event, 'ProposalDefined', 'event');
+        assert.equal(tx.logs[1].event, 'ProposalDefinition', 'event');
         assert.equal(tx.logs[1].args.sessionId.toString(), '2', 'session id');
         assert.equal(tx.logs[1].args.proposalId.toString(), '1', 'proposalId');
       });
@@ -1174,7 +1175,7 @@ contract('VotingSessionManager', function (accounts) {
           ((NEXT_VOTE_AT - TODAY) < Periods.campaign)
             ? NEXT_VOTE_AT + DEFAULT_PERIOD_LENGTH
             : NEXT_VOTE_AT, 'voteAt');
-        assert.equal(tx.logs[1].event, 'ProposalDefined', 'event');
+        assert.equal(tx.logs[1].event, 'ProposalDefinition', 'event');
         assert.equal(tx.logs[1].args.sessionId.toString(), '2', 'session id');
         assert.equal(tx.logs[1].args.proposalId.toString(), '1', 'proposalId');
       });
@@ -1622,7 +1623,7 @@ contract('VotingSessionManager', function (accounts) {
           assert.equal(tx.logs[0].args.voteAt.toString(), NEXT_VOTE_AT, 'voteAt');
           assert.equal(tx.logs[1].event, 'SessionArchived', 'event');
           assert.equal(tx.logs[1].args.sessionId.toString(), '2', 'session id');
-          assert.equal(tx.logs[2].event, 'ProposalDefined', 'event');
+          assert.equal(tx.logs[2].event, 'ProposalDefinition', 'event');
           assert.equal(tx.logs[2].args.sessionId.toString(), '12', 'session id');
           assert.equal(tx.logs[2].args.proposalId.toString(), '1', 'proposalId');
         });

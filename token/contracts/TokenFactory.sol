@@ -6,9 +6,11 @@ import "@c-layer/common/contracts/operable/OperableAsCore.sol";
 import "@c-layer/common/contracts/interface/IERC20.sol";
 import "@c-layer/distribution/contracts/interface/IWrappedERC20.sol";
 import "./interface/ITokenCore.sol";
-import "./interface/ITokenDelegate.sol";
+import "./interface/ITokenERC20Delegate.sol";
+import "./interface/ITokenERC20Proxy.sol";
 import "./interface/ITokenFactory.sol";
 import "./rule/YesNoRule.sol";
+import "./TokenAccessDefinitions.sol";
 
 
 /**
@@ -42,7 +44,24 @@ import "./rule/YesNoRule.sol";
  *   TF22: Allowance must be lower than the token balance
  *   TF23: Allowance must be successful
  **/
-contract TokenFactory is ITokenFactory, Factory, OperableAsCore, YesNoRule, Operable {
+contract TokenFactory is
+  ITokenFactory, Factory, OperableAsCore, YesNoRule, Operable, TokenAccessDefinitions
+{
+
+  // The definitions below should be considered as a constant
+  // Solidity 0.6.x do not provide ways to have arrays as constants
+  bytes4[] public requiredCorePrivileges = [
+    ASSIGN_PROXY_OPERATORS_PRIV,
+    DEFINE_TOKEN_PRIV,
+    DEFINE_AUDIT_TRIGGERS_PRIV
+  ];
+  bytes4[] public requiredProxyPrivileges = [
+    MINT_PRIV,
+    FINISH_MINTING_PRIV,
+    DEFINE_LOCK_PRIV,
+    DEFINE_TOKEN_LOCK_PRIV,
+    DEFINE_RULES_PRIV
+  ];
 
   /*
    * @dev constructor
@@ -105,71 +124,70 @@ contract TokenFactory is ITokenFactory, Factory, OperableAsCore, YesNoRule, Oper
     require(_vaults.length == _supplies.length, "TF02");
 
     // 1- Creating a proxy
-    IERC20 token = IERC20(deployContractInternal(
+    ITokenERC20Proxy token = ITokenERC20Proxy(deployContractInternal(
       uint256(ProxyCode.TOKEN), abi.encode(address(_core))));
     require(address(token) != address(0), "TF03");
 
     // 2- Defining the token in the core
-    require(_core.defineToken(
-      address(token), _delegateId, _name, _symbol, _decimals), "TF04");
+    _core.defineToken(token, _delegateId, _name, _symbol, _decimals);
 
     // 3- Assign roles
-    require(_core.assignProxyOperators(address(token), ISSUER_PROXY_ROLE, _proxyOperators), "TF05");
+    _core.assignProxyOperators(token, ISSUER_PROXY_ROLE, _proxyOperators);
 
     // 4- Define rules
     // Token is blocked for review and approval by core operators
     // This contract is used as a YesNo rule configured as No to prevent transfers
     // Removing this contract from the rules will unlock the token
-    ITokenDelegate coreAsDelegate = ITokenDelegate(address(_core));
+    ITokenERC20Delegate coreAsDelegate = ITokenERC20Delegate(address(_core));
     if (!_core.hasCorePrivilege(msg.sender, APPROVE_TOKEN_PRIV)) {
       IRule[] memory factoryRules = new IRule[](1);
       factoryRules[0] = IRule(address(this));
-      require(coreAsDelegate.defineRules(address(token), factoryRules), "TF06");
+      coreAsDelegate.defineRules(token, factoryRules);
     }
 
     // 5- Locking the token
     address[] memory locks = new address[](1);
     locks[0] = address(token);
-    require(coreAsDelegate.defineTokenLocks(address(token), locks), "TF07");
+    coreAsDelegate.defineTokenLocks(token, locks);
 
     // solhint-disable-next-line not-rely-on-time
     if (_lockEnd > block.timestamp) {
-      require(coreAsDelegate.defineLock(
+      coreAsDelegate.defineLock(
         address(token),
         ANY_ADDRESSES,
         ANY_ADDRESSES,
         0,
-        _lockEnd), "TF08");
+        _lockEnd);
     }
 
     // 6- Mint the token
-    require(coreAsDelegate.mint(address(token), _vaults, _supplies), "TF09");
+    coreAsDelegate.mint(token, _vaults, _supplies);
 
     // 7 - Finish the minting
     if(_finishMinting) {
-      require(coreAsDelegate.finishMinting(address(token)), "TF10");
+      coreAsDelegate.finishMinting(token);
     }
 
-    emit TokenDeployed(token);
+    emit ProxyDeployed(token);
     return token;
   }
 
   /**
    * @dev approveToken
    */
-  function approveToken(ITokenCore _core, ITokenProxy _token)
+  function approveToken(ITokenCore _core, IProxy _token)
     override public onlyCoreOperator(_core) returns (bool)
   {
     require(hasCoreAccess(_core), "TF01");
-    require(_token.core() == address(_core), "TF11");
+    require(_token.core() == _core, "TF11");
 
     // This ensure that the call does not change a custom made rules configuration
-    (,,,,,,IRule[] memory rules) = _core.token(address(_token));
+    ITokenERC20Delegate coreAsDelegate = ITokenERC20Delegate(address(_core));
+    (,,,,,,IRule[] memory rules) = coreAsDelegate.token(_token);
     if (rules.length == 1 && rules[0] == IRule(this)) {
-      ITokenDelegate coreAsDelegate = ITokenDelegate(address(_core));
-      require(coreAsDelegate.defineRules(address(_token), new IRule[](0)), "TF12");
+      coreAsDelegate.defineRules(_token, new IRule[](0));
     }
-    emit TokenApproved(_token);
+    emit ProxyApproved(_token);
     return true;
   }
 
@@ -177,14 +195,14 @@ contract TokenFactory is ITokenFactory, Factory, OperableAsCore, YesNoRule, Oper
    * @dev deploy wrapped token
    */
   function deployWrappedToken(
-    ITokenProxy _token,
+    ITokenERC20Proxy _token,
     string memory _name,
     string memory _symbol,
     uint256 _decimals,
     address[] memory _vaults,
     uint256[] memory _supplies,
     bool _compliance
-  ) override public onlyProxyOperator(Proxy(address(_token))) returns (IERC20) {
+  ) override public onlyProxyOperator(_token) returns (IERC20) {
     require(_vaults.length == _supplies.length, "TF02");
 
     ITokenCore core;
@@ -207,13 +225,13 @@ contract TokenFactory is ITokenFactory, Factory, OperableAsCore, YesNoRule, Oper
       // Avoid the approval step for non self managed users
       address[] memory operators = new address[](1);
       operators[0] = address(wToken);
-      require(core.assignProxyOperators(address(_token), OPERATOR_PROXY_ROLE, operators), "TF15");
+      core.assignProxyOperators(_token, OPERATOR_PROXY_ROLE, operators);
 
       ITokenDelegate coreAsDelegate = ITokenDelegate(address(core));
 
       // Avoid KYC restrictions for the wrapped tokens (AuditConfigurationId == 0)
       {
-        uint256 delegateId = core.proxyDelegateId(address(_token));
+        uint256 delegateId = core.proxyDelegateId(_token);
         uint256 auditConfigurationId = core.delegatesConfigurations(delegateId)[0];
         address[] memory senders = new address[](2);
         senders[0] = ANY_ADDRESSES;
@@ -224,18 +242,18 @@ contract TokenFactory is ITokenFactory, Factory, OperableAsCore, YesNoRule, Oper
         ITokenStorage.AuditTriggerMode[] memory modes = new ITokenStorage.AuditTriggerMode[](2);
         modes[0] = ITokenStorage.AuditTriggerMode.NONE;
         modes[1] = ITokenStorage.AuditTriggerMode.RECEIVER_ONLY;
-        require(core.defineAuditTriggers(auditConfigurationId,
-          senders, receivers, modes), "TF16");
+        core.defineAuditTriggers(auditConfigurationId,
+          senders, receivers, modes);
       }
 
-      require(coreAsDelegate.defineLock(address(_token), address(this), ANY_ADDRESSES, ~uint64(0), ~uint64(0)), "TF17");
+      coreAsDelegate.defineLock(address(_token), address(this), ANY_ADDRESSES, ~uint64(0), ~uint64(0));
     } else {
-      require(_token.approve(address(wToken), ~uint256(0)), "TF18");
+      _token.approve(address(wToken), ~uint256(0));
     }
 
     // 3- Wrap tokens
     for(uint256 i=0; i < _vaults.length; i++) {
-      require(wToken.depositTo(_vaults[i], _supplies[i]), "TF19");
+      wToken.depositTo(_vaults[i], _supplies[i]);
     }
 
     return wToken;
@@ -245,10 +263,10 @@ contract TokenFactory is ITokenFactory, Factory, OperableAsCore, YesNoRule, Oper
    * @dev configureTokensales
    */
   function configureTokensales(
-    ITokenProxy _token,
+    ITokenERC20Proxy _token,
     address[] memory _tokensales,
     uint256[] memory _allowances)
-    override public onlyProxyOperator(Proxy(address(_token))) returns (bool)
+    override public onlyProxyOperator(_token) returns (bool)
   {
     ITokenCore core = ITokenCore(payable(_token.core()));
     require(hasCoreAccess(core), "TF01");
@@ -256,7 +274,7 @@ contract TokenFactory is ITokenFactory, Factory, OperableAsCore, YesNoRule, Oper
 
     ITokenDelegate coreAsDelegate = ITokenDelegate(address(core));
     for(uint256 i=0; i < _tokensales.length; i++) {
-      require(coreAsDelegate.defineLock(address(_token), _tokensales[i], ANY_ADDRESSES, ~uint64(0), ~uint64(0)), "TF21");
+      coreAsDelegate.defineLock(address(_token), _tokensales[i], ANY_ADDRESSES, ~uint64(0), ~uint64(0));
     }
 
     updateAllowances(_token, _tokensales, _allowances);
@@ -268,7 +286,7 @@ contract TokenFactory is ITokenFactory, Factory, OperableAsCore, YesNoRule, Oper
    * @dev updateAllowance
    */
   function updateAllowances(
-    ITokenProxy _token,
+    ITokenERC20Proxy _token,
     address[] memory _spenders,
     uint256[] memory _allowances)
     override public onlyProxyOperator(_token) returns (bool)
@@ -276,7 +294,7 @@ contract TokenFactory is ITokenFactory, Factory, OperableAsCore, YesNoRule, Oper
     uint256 balance = _token.balanceOf(address(this));
     for(uint256 i=0; i < _spenders.length; i++) {
       require(_allowances[i] <= balance, "TF22");
-      require(_token.approve(_spenders[i], _allowances[i]), "TF23");
+      _token.approve(_spenders[i], _allowances[i]);
       emit AllowanceUpdated(_token, _spenders[i], _allowances[i]);
     }
     return true;

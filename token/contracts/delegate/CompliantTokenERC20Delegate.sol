@@ -1,0 +1,86 @@
+pragma solidity ^0.8.0;
+
+import "./RuleEngineDelegate.sol";
+import "./SeizableERC20Delegate.sol";
+import "./FreezableDelegate.sol";
+import "./LockableDelegate.sol";
+import "./LimitableTransferabilityDelegate.sol";
+import "./MintableTokenERC20Delegate.sol";
+
+
+/**
+ * @title Compliant Token ERC20 Delegate
+ * @dev Compliant Token ERC20 Delegate
+ *
+ * @author Cyril Lapinte - <cyril.lapinte@openfiz.com>
+ * SPDX-License-Identifier: MIT
+ *
+ * Error messagesa
+ * CT01: The token must not be locked
+ * CT02: The addresses must not be frozen
+ * CT03: The transfer rules must be valid
+ * CT04: The sender must remains below its limit
+ * CT05: The rceiver must remains below its limit
+ */
+contract CompliantTokenERC20Delegate is
+  LimitableTransferabilityDelegate,
+  FreezableDelegate,
+  LockableDelegate,
+  RuleEngineDelegate,
+  SeizableERC20Delegate,
+  MintableTokenERC20Delegate
+{
+
+  uint256 internal constant AUDIT_CONFIG_REQUIREMENTS = 1; // 1- Transfer Limits
+
+  /**
+   * @dev check config requirements
+   **/
+  function checkConfigurations(uint256[] calldata _auditConfigurationIds)
+    override public pure returns (bool)
+  {
+    return (_auditConfigurationIds.length >= AUDIT_CONFIG_REQUIREMENTS);
+  }
+
+ /**
+   * @dev transfer
+   */
+  function transferInternal(STransferData memory _transferData)
+    override internal returns (bool)
+  {
+    require(!isLocked(_transferData), "CT01");
+    require(!isFrozen(_transferData), "CT02");
+    require(areTransferRulesValid(_transferData), "CT03");
+
+    STransferAuditData memory _transferAuditData =
+      prepareAuditInternal(_transferData);
+    require(isTransferBelowLimits(_transferData, _transferAuditData) == TransferCode.OK, "CT04");
+
+    return super.transferInternal(_transferData)
+      && updateAllAuditsInternal(_transferData, _transferAuditData);
+  }
+
+  /**
+   * @dev can transfer
+   */
+  function canTransferInternal(STransferData memory _transferData)
+    override internal view returns (TransferCode code)
+  {
+    if (isLocked(_transferData)) {
+      return TransferCode.LOCKED;
+    }
+    if (isFrozen(_transferData)) {
+      return TransferCode.FROZEN;
+    }
+    if (!areTransferRulesValid(_transferData)) {
+      return TransferCode.RULE;
+    }
+
+    STransferAuditData memory _transferAuditData =
+      prepareAuditInternal(_transferData);
+
+    code = isTransferBelowLimits(_transferData, _transferAuditData);
+    return (code == TransferCode.OK) ? 
+      super.canTransferInternal(_transferData) : code;
+  }
+}

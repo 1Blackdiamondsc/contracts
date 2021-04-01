@@ -6,8 +6,8 @@
 
 const assertRevert = require('../helpers/assertRevert');
 const ProxyMock = artifacts.require('ProxyMock.sol');
-const DelegateViewMock = artifacts.require('DelegateViewMock.sol');
-const CoreMock = artifacts.require('CoreMock.sol');
+const DelegateMock = artifacts.require('DelegateMock.sol');
+const Core = artifacts.require('Core.sol');
 
 const STRING = 'TheAnswerIsLife';
 
@@ -16,31 +16,41 @@ contract('Proxy', function (accounts) {
 
   describe('with a core mock', function () {
     beforeEach(async function () {
-      delegate = await DelegateViewMock.new();
-      core = await CoreMock.new();
+      delegate = await DelegateMock.new();
+      core = await Core.new([accounts[0]]);
       proxy = await ProxyMock.new(core.address);
 
-      await core.defineDelegateMock(1, delegate.address);
-      await core.defineProxyMock(proxy.address, 1);
+      await core.defineDelegate(1, delegate.address);
+      await core.defineProxy(proxy.address, 1);
     });
 
     it('should have static call successful', async function () {
-      const result = await proxy.delegateCallUint256Mock(42);
+      const result = await proxy.staticCallUint256Mock(42);
       assert.equal(result.toString(), '42', 'static value call');
     });
 
     it('should have static call failing', async function () {
-      await assertRevert(proxy.delegateCallUint256Mock(0), 'DVM02');
+      await assertRevert(proxy.staticCallUint256Mock(0), 'DM12');
     });
 
     it('should have static call string successfull', async function () {
-      const result = await proxy.delegateCallStringMock(STRING);
+      const result = await proxy.staticCallStringMock(STRING);
       assert.equal(result.length, STRING.length, 'string length');
       assert.equal(result, STRING, 'result call');
     });
 
     it('should have static call string failling', async function () {
-      await assertRevert(proxy.delegateCallStringMock(''), 'DVM04');
+      await assertRevert(proxy.staticCallStringMock(''), 'DM14');
+    });
+
+    it('should have call uint successfull', async function () {
+      const tx = await proxy.delegateCallUint256Mock(42);
+      assert.ok(tx.receipt.status, 'Status');
+    });
+
+    it('should have static call string failling', async function () {
+      const tx = await proxy.delegateCallStringMock(STRING);
+      assert.ok(tx.receipt.status, 'Status');
     });
   });
 

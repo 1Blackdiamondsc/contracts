@@ -19,11 +19,11 @@ abstract contract RuleEngineDelegate is IRuleEngineDelegate, TokenStorage {
   /**
    * @dev Define rules to the token
    */
-  function defineRules(address _token, IRule[] memory _rules)
+  function defineRules(IProxy _token, IRule[] memory _rules)
     public override returns (bool)
   {
     tokens[_token].rules = _rules;
-    emit RulesDefined(_token, _rules);
+    emit RulesDefinition(_token, _rules);
     return true;
   }
 

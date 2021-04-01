@@ -1,7 +1,7 @@
 pragma solidity ^0.8.0;
 
 import "@c-layer/common/contracts/operable/Ownable.sol";
-import "@c-layer/token/contracts/interface/ITokenProxy.sol";
+import "@c-layer/token/contracts/interface/ITokenERC20Proxy.sol";
 import "./IVotingSessionStorage.sol";
 import "./IVotingSessionDelegate.sol";
 
@@ -14,12 +14,12 @@ import "./IVotingSessionDelegate.sol";
  *
  * Error messages
  */
-abstract contract IVotingSessionManager is IVotingSessionStorage {
+interface IVotingSessionManager is IVotingSessionStorage {
 
-  function contracts() public virtual view returns (
-    IVotingSessionDelegate delegate, ITokenProxy token, ITokenCore core);
+  function contracts() external view returns (
+    IVotingSessionDelegate delegate, ITokenERC20Proxy token, ITokenCore core);
 
-  function sessionRule() virtual public view returns (
+  function sessionRule() external view returns (
     uint64 campaignPeriod,
     uint64 votingPeriod,
     uint64 executionPeriod,
@@ -31,16 +31,16 @@ abstract contract IVotingSessionManager is IVotingSessionStorage {
     uint256 newProposalThreshold,
     address[] memory nonVotingAddresses);
 
-  function resolutionRequirement(address _target, bytes4 _method) virtual public view returns (
+  function resolutionRequirement(address _target, bytes4 _method) external view returns (
     uint128 majority,
     uint128 quorum,
     uint256 executionThreshold);
 
-  function oldestSessionId() virtual public view returns (uint256);
+  function oldestSessionId() external view returns (uint256);
 
-  function currentSessionId() virtual public view returns (uint256);
+  function currentSessionId() external view returns (uint256);
 
-  function session(uint256 _sessionId) virtual public view returns (
+  function session(uint256 _sessionId) external view returns (
     uint64 campaignAt,
     uint64 voteAt,
     uint64 executionAt,
@@ -51,13 +51,13 @@ abstract contract IVotingSessionManager is IVotingSessionStorage {
     uint256 totalSupply,
     uint256 circulatingSupply);
 
-  function proposal(uint256 _sessionId, uint8 _proposalId) virtual public view returns (
+  function proposal(uint256 _sessionId, uint8 _proposalId) external view returns (
     string memory name,
     string memory url,
     bytes32 proposalHash,
     address resolutionTarget,
     bytes memory resolutionAction);
-  function proposalData(uint256 _sessionId, uint8 _proposalId) virtual public view returns (
+  function proposalData(uint256 _sessionId, uint8 _proposalId) external view returns (
     address proposedBy,
     uint128 requirementMajority,
     uint128 requirementQuorum,
@@ -67,25 +67,25 @@ abstract contract IVotingSessionManager is IVotingSessionStorage {
     uint256 alternativesMask,
     uint256 approvals);
 
-  function sponsorOf(address _voter) virtual public view returns (address sponsor, uint64 until);
+  function sponsorOf(address _voter) external view returns (address sponsor, uint64 until);
 
-  function lastVoteOf(address _voter) virtual public view returns (uint64 at);
+  function lastVoteOf(address _voter) external view returns (uint64 at);
 
-  function nextSessionAt(uint256 _time) virtual public view returns (uint256 at);
+  function nextSessionAt(uint256 _time) external view returns (uint256 at);
 
-  function sessionStateAt(uint256 _sessionId, uint256 _time) virtual public view returns (SessionState);
+  function sessionStateAt(uint256 _sessionId, uint256 _time) external view returns (SessionState);
 
   function newProposalThresholdAt(uint256 _sessionId, uint256 _proposalsCount)
-    virtual public view returns (uint256);
+    external view returns (uint256);
 
   function proposalApproval(uint256 _sessionId, uint8 _proposalId)
-    virtual public view returns (bool);
+    external view returns (bool);
 
   function proposalStateAt(uint256 _sessionId, uint8 _proposalId, uint256 _time)
-    virtual public view returns (ProposalState);
+    external view returns (ProposalState);
 
-  function defineContracts(ITokenProxy _token, IVotingSessionDelegate _delegate)
-    virtual public returns (bool);
+  function defineContracts(ITokenERC20Proxy _token, IVotingSessionDelegate _delegate)
+    external;
 
   function updateSessionRule(
     uint64 _campaignPeriod,
@@ -98,7 +98,7 @@ abstract contract IVotingSessionManager is IVotingSessionStorage {
     uint8 _maxProposalsQuaestor,
     uint256 _newProposalThreshold,
     address[] memory _nonVotingAddresses
-  ) virtual public returns (bool);
+  ) external;
   
   function updateResolutionRequirements(
     address[] memory _targets,
@@ -106,11 +106,11 @@ abstract contract IVotingSessionManager is IVotingSessionStorage {
     uint128[] memory _majority,
     uint128[] memory _quorum,
     uint256[] memory _executionThreshold
-  ) virtual public returns (bool);
+  ) external;
 
-  function defineSponsor(address _sponsor, uint64 _until) virtual public returns (bool);
+  function defineSponsor(address _sponsor, uint64 _until) external;
   function defineSponsorOf(Ownable _contract, address _sponsor, uint64 _until)
-    virtual public returns (bool);
+    external;
 
   function defineProposal(
     string memory _name,
@@ -120,7 +120,7 @@ abstract contract IVotingSessionManager is IVotingSessionStorage {
     bytes memory _resolutionAction,
     uint8 _dependsOn,
     uint8 _alternativeOf
-  ) virtual public returns (bool);
+  ) external;
 
   function updateProposal(
     uint8 _proposalId,
@@ -131,16 +131,15 @@ abstract contract IVotingSessionManager is IVotingSessionStorage {
     bytes memory _resolutionAction,
     uint8 _dependsOn,
     uint8 _alternativeOf
-  ) virtual public returns (bool);
-  function cancelProposal(uint8 _proposalId) virtual public returns (bool);
+  ) external;
+  function cancelProposal(uint8 _proposalId) external;
 
-  function submitVote(uint256 _votes) virtual public returns (bool);
+  function submitVote(uint256 _votes) external;
   function submitVotesOnBehalf(
     address[] memory _voters,
     uint256 _votes
-  ) virtual public returns (bool);
+  ) external;
 
-  function executeResolutions(uint8[] memory _proposalIds) virtual public returns (bool);
-
-  function archiveSession() virtual public returns (bool);
+  function executeResolutions(uint8[] memory _proposalIds) external;
+  function archiveSession() external;
 }

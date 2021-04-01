@@ -260,7 +260,7 @@ contract VotingSessionDelegate is IVotingSessionDelegate, VotingSessionStorage {
     uint8 _maxProposalsOperator,
     uint256 _newProposalThreshold,
     address[] memory _nonVotingAddresses
-  )  public override returns (bool) {
+  )  external override {
     require(_campaignPeriod <= MAX_PERIOD_LENGTH, "VD03");
     require(_votingPeriod >= MIN_PERIOD_LENGTH && _votingPeriod <= MAX_PERIOD_LENGTH, "VD04");
     require(_executionPeriod >= MIN_PERIOD_LENGTH && _executionPeriod <= MAX_PERIOD_LENGTH, "VD05");
@@ -302,7 +302,7 @@ contract VotingSessionDelegate is IVotingSessionDelegate, VotingSessionStorage {
       _newProposalThreshold,
       _nonVotingAddresses);
 
-    emit SessionRuleUpdated(
+    emit SessionRuleUpdate(
       _campaignPeriod,
       _votingPeriod,
       _executionPeriod,
@@ -313,7 +313,6 @@ contract VotingSessionDelegate is IVotingSessionDelegate, VotingSessionStorage {
       _maxProposalsOperator,
       _newProposalThreshold,
       _nonVotingAddresses);
-    return true;
   }
 
   /**
@@ -325,7 +324,7 @@ contract VotingSessionDelegate is IVotingSessionDelegate, VotingSessionStorage {
     uint128[] memory _majorities,
     uint128[] memory _quorums,
     uint256[] memory _executionThresholds
-  ) public override returns (bool)
+  ) external override
   {
     require(_targets.length == _methodSignatures.length, "VD13");
     require(_methodSignatures.length == _majorities.length, "VD14");
@@ -345,10 +344,9 @@ contract VotingSessionDelegate is IVotingSessionDelegate, VotingSessionStorage {
 
       resolutionRequirements[_targets[i]][_methodSignatures[i]] =
         ResolutionRequirement(_majorities[i], _quorums[i], _executionThresholds[i]);
-      emit ResolutionRequirementUpdated(
+      emit ResolutionRequirementUpdate(
          _targets[i], _methodSignatures[i], _majorities[i], _quorums[i], _executionThresholds[i]);
     }
-    return true;
   }
 
   /**
@@ -361,11 +359,11 @@ contract VotingSessionDelegate is IVotingSessionDelegate, VotingSessionStorage {
     address _resolutionTarget,
     bytes memory _resolutionAction,
     uint8 _dependsOn,
-    uint8 _alternativeOf) public override returns (bool)
+    uint8 _alternativeOf) external override
   {
     Session storage session_ = loadSessionInternal();
 
-    if (core_.hasProxyPrivilege(msg.sender, address(this), msg.sig)) {
+    if (core_.hasProxyPrivilege(msg.sender, IProxy(address(this)), msg.sig)) {
       require(session_.proposalsCount < sessionRule_.maxProposalsOperator, "VD19");
     } else {
       require(session_.proposalsCount < sessionRule_.maxProposals, "VD20");
@@ -378,8 +376,7 @@ contract VotingSessionDelegate is IVotingSessionDelegate, VotingSessionStorage {
       _name, _url, _proposalHash, _resolutionTarget, _resolutionAction, _dependsOn, _alternativeOf);
     session_.proposals[proposalId].proposedBy = msg.sender;
  
-    emit ProposalDefined(currentSessionId_, proposalId);
-    return true;
+    emit ProposalDefinition(currentSessionId_, proposalId);
   }
 
   /**
@@ -394,7 +391,7 @@ contract VotingSessionDelegate is IVotingSessionDelegate, VotingSessionStorage {
     bytes memory _resolutionAction,
     uint8 _dependsOn,
     uint8 _alternativeOf
-  ) public override onlyExistingProposal(currentSessionId_, _proposalId) returns (bool)
+  ) external override onlyExistingProposal(currentSessionId_, _proposalId)
   {
     uint256 sessionId = currentSessionId_;
     require(sessionStateAt(sessionId, currentTime()) == SessionState.PLANNED, "VD22");
@@ -403,15 +400,14 @@ contract VotingSessionDelegate is IVotingSessionDelegate, VotingSessionStorage {
     updateProposalInternal(_proposalId,
       _name, _url, _proposalHash, _resolutionTarget, _resolutionAction, _dependsOn, _alternativeOf);
 
-    emit ProposalUpdated(sessionId, _proposalId);
-    return true;
+    emit ProposalUpdate(sessionId, _proposalId);
   }
 
   /**
    * @dev cancelProposal
    */
   function cancelProposal(uint8 _proposalId)
-    public override onlyExistingProposal(currentSessionId_, _proposalId) returns (bool)
+    external override onlyExistingProposal(currentSessionId_, _proposalId)
   {
     uint256 sessionId = currentSessionId_;
     require(sessionStateAt(sessionId, currentTime()) == SessionState.PLANNED, "VD22");
@@ -422,39 +418,33 @@ contract VotingSessionDelegate is IVotingSessionDelegate, VotingSessionStorage {
 
     proposal_.cancelled = true;
     emit ProposalCancelled(sessionId, _proposalId);
-    return true;
   }
 
   /**
    * @dev submitVote
    */
-  function submitVote(uint256 _votes) public override returns (bool)
+  function submitVote(uint256 _votes) external override
   {
     address[] memory voters = new address[](1);
     voters[0] = msg.sender;
     submitVoteInternal(voters, _votes);
-    return true;
   }
 
   /**
    * @dev submitVotesOnBehalf
    */
-  function submitVotesOnBehalf(
-    address[] memory _voters,
-    uint256 _votes
-  ) public override returns (bool)
+  function submitVotesOnBehalf(address[] memory _voters, uint256 _votes) external override
   {
     submitVoteInternal(_voters, _votes);
-    return true;
   }
 
   /**
    * @dev execute resolutions
    */
-  function executeResolutions(uint8[] memory _proposalIds) public override returns (bool)
+  function executeResolutions(uint8[] memory _proposalIds) external override
   {
     uint256 balance;
-    if (core_.hasProxyPrivilege(msg.sender, address(this), msg.sig)) {
+    if (core_.hasProxyPrivilege(msg.sender, IProxy(address(this)), msg.sig)) {
       balance = ~uint256(0);
     } else {
       balance = token_.balanceOf(msg.sender);
@@ -494,15 +484,14 @@ contract VotingSessionDelegate is IVotingSessionDelegate, VotingSessionStorage {
         require(success, "VD31");
       }
 
-      emit ResolutionExecuted(sessionId, proposalId);
+      emit ResolutionExecution(sessionId, proposalId);
     }
-    return true;
   }
 
   /**
    * @dev archiveSession
    **/
-  function archiveSession() public override onlyExistingSession(oldestSessionId_) returns (bool) {
+  function archiveSession() public override onlyExistingSession(oldestSessionId_) {
     Session storage session_ = sessions[oldestSessionId_];
     require((currentSessionId_ >= (oldestSessionId_ + SESSION_RETENTION_COUNT)) ||
       (currentTime() > (SESSION_RETENTION_PERIOD + session_.voteAt)), "VD32");
@@ -511,7 +500,6 @@ contract VotingSessionDelegate is IVotingSessionDelegate, VotingSessionStorage {
     }
     delete sessions[oldestSessionId_];
     emit SessionArchived(oldestSessionId_++);
-    return true;
   }
 
   /**
@@ -668,7 +656,7 @@ contract VotingSessionDelegate is IVotingSessionDelegate, VotingSessionStorage {
       address voter = _voters[i];
 
       require(voter == msg.sender ||
-        (core_.hasProxyPrivilege(msg.sender, address(this), msg.sig) && !core_.isSelfManaged(voter)) ||
+        (core_.hasProxyPrivilege(msg.sender, IProxy(address(this)), msg.sig) && !core_.isSelfManaged(voter)) ||
         (sponsors[voter].address_ == msg.sender && sponsors[voter].until  >= currentTime_), "VD38");
       require(lastVotes[voter] < session_.voteAt, "VD39");
       uint256 balance = token_.balanceOf(voter);

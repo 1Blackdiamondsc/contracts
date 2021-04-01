@@ -1,6 +1,7 @@
 pragma solidity ^0.8.0;
 
-import "../interface/IRule.sol";
+import "./IRule.sol";
+import "./ITokenStorage.sol";
 
 
 /**
@@ -12,7 +13,7 @@ import "../interface/IRule.sol";
  *
  * Error messages
  */
-abstract contract IRuleEngineDelegate {
+interface IRuleEngineDelegate is ITokenStorage {
 
-  function defineRules(address _token, IRule[] memory _rules) public virtual returns (bool);
+  function defineRules(IProxy _token, IRule[] memory _rules) external returns (bool);
 }

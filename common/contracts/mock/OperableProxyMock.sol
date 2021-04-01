@@ -18,7 +18,7 @@ contract OperableProxyMock is OperableProxy {
   bool public success;
 
   // solhint-disable-next-line no-empty-blocks
-  constructor(address _core) OperableProxy(_core) { }
+  constructor(ICore _core) OperableProxy(_core) { }
 
   function setSuccess() public onlyOperator returns (bool) {
     success = true;

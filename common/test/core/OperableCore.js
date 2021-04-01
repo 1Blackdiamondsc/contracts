@@ -6,10 +6,11 @@
 
 const assertRevert = require('../helpers/assertRevert');
 const OperableProxyMock = artifacts.require('OperableProxyMock.sol');
-const OperableCoreMock = artifacts.require('OperableCoreMock.sol');
+const Core = artifacts.require('Core.sol');
+const DelegateMock = artifacts.require('DelegateMock.sol');
 
 contract('OperableCore', function (accounts) {
-  let proxy, core;
+  let proxy, delegate, core, coreAsDelegate;
   const owner = accounts[0];
   const sysOperator = accounts[1];
   const nonOperator = accounts[2];
@@ -22,9 +23,11 @@ contract('OperableCore', function (accounts) {
   const ALL_PROXIES = web3.utils.toChecksumAddress(
     '0x' + web3.utils.fromAscii('AllProxies').substr(2).padStart(40, '0'));
   const FAKE_ADDRESS = '0x'.padEnd(42, 'f');
+  const DELEGATE_METHOD = 'delegateCallBoolMock(address,bool)';
 
   beforeEach(async function () {
-    core = await OperableCoreMock.new([ sysOperator ]);
+    core = await Core.new([ sysOperator ]);
+    coreAsDelegate = await DelegateMock.at(core.address);
     proxy = await OperableProxyMock.new(core.address);
   });
 
@@ -36,16 +39,6 @@ contract('OperableCore', function (accounts) {
   it('should have a owner for core', async function () {
     const coreOwner = await core.owner();
     assert.equal(coreOwner, owner, 'owner');
-  });
-
-  it('should have a core with allPrivileges defined', async function () {
-    const allPrivs = await core.allPrivileges();
-    assert.equal(allPrivs, ALL_PRIVILEGES, 'all privileges');
-  });
-
-  it('should have a core with allProxies defined', async function () {
-    const allProxies = await core.allProxies();
-    assert.equal(allProxies, ALL_PROXIES, 'all proxies');
   });
 
   it('should have no privileges role for owner', async function () {
@@ -130,20 +123,20 @@ contract('OperableCore', function (accounts) {
     const tx = await core.defineRole(UNSECURE_ROLE, ['0xaaaabbbb', '0x11112222']);
     assert.ok(tx.receipt.status, 'Status');
     assert.equal(tx.logs.length, 1);
-    assert.equal(tx.logs[0].event, 'RoleDefined', 'event');
+    assert.equal(tx.logs[0].event, 'RoleDefinition', 'event');
     assert.equal(tx.logs[0].args.role, UNSECURE_ROLE, 'role');
   });
 
   it('should prevent non operator to define a new role', async function () {
-    await assertRevert(core.defineRole(UNSECURE_ROLE, ['0xaaaabbbb', '0x11112222'], { from: nonOperator }), 'OC01');
+    await assertRevert(core.defineRole(UNSECURE_ROLE, ['0xaaaabbbb', '0x11112222'], { from: nonOperator }), 'CO01');
   });
 
   it('should prevent redefining no privileges', async function () {
-    await assertRevert(core.defineRole(NO_PRIVILEGES, ['0xaaaabbbb', '0x11112222']), 'OC04');
+    await assertRevert(core.defineRole(NO_PRIVILEGES, ['0xaaaabbbb', '0x11112222']), 'CO05');
   });
 
   it('should prevent redefining AllPrivileges', async function () {
-    await assertRevert(core.defineRole(ALL_PRIVILEGES, ['0xaaaabbbb', '0x11112222']), 'OC05');
+    await assertRevert(core.defineRole(ALL_PRIVILEGES, ['0xaaaabbbb', '0x11112222']), 'CO06');
   });
 
   it('should let operator add core operators', async function () {
@@ -160,17 +153,17 @@ contract('OperableCore', function (accounts) {
 
   it('should prevent operator to assign core operators to no privileges', async function () {
     await assertRevert(
-      core.assignOperators(NO_PRIVILEGES, [accounts[1], accounts[2]]), 'OC04');
+      core.assignOperators(NO_PRIVILEGES, [accounts[1], accounts[2]]), 'CO05');
   });
 
   it('should prevent non operator to assign core operators', async function () {
     await assertRevert(
-      core.assignOperators(ALL_PRIVILEGES, [accounts[1], accounts[2]], { from: nonOperator }), 'OC01');
+      core.assignOperators(ALL_PRIVILEGES, [accounts[1], accounts[2]], { from: nonOperator }), 'CO01');
   });
 
   it('should prevent operator to add proxy operators on invalid proxies', async function () {
     await assertRevert(core.assignProxyOperators(
-      proxy.address, ALL_PRIVILEGES, [accounts[2], accounts[3]]), 'OC07');
+      proxy.address, ALL_PRIVILEGES, [accounts[2], accounts[3]]), 'CO07');
   });
 
   it('should let proxy operator to operate proxy', async function () {
@@ -232,22 +225,22 @@ contract('OperableCore', function (accounts) {
     });
 
     it('should prevent non authorized to assign operators', async function () {
-      await assertRevert(core.assignOperators(ALL_PRIVILEGES, [anyUser], { from: anyUser }), 'OC01');
+      await assertRevert(core.assignOperators(ALL_PRIVILEGES, [anyUser], { from: anyUser }), 'CO01');
     });
 
     it('should prevent non authorized to revoke operators', async function () {
-      await assertRevert(core.revokeOperators([roleAssignerOnly], { from: roleDesignerOnly }), 'OC01');
+      await assertRevert(core.revokeOperators([roleAssignerOnly], { from: roleDesignerOnly }), 'CO01');
     });
 
     it('should prevent operator to revoke non operators', async function () {
-      await assertRevert(core.revokeOperators([anyUser], { from: roleAssignerOnly }), 'OC08');
+      await assertRevert(core.revokeOperators([anyUser], { from: roleAssignerOnly }), 'CO08');
     });
 
     it('should let "RoleDesigner 1" to define new role', async function () {
       const tx = await core.defineRole(ROLE_NEW, ['0xe68fdc5f'], { from: roleDesignerOnly });
       assert.ok(tx.receipt.status, 'Status');
       assert.equal(tx.logs.length, 1);
-      assert.equal(tx.logs[0].event, 'RoleDefined', 'event');
+      assert.equal(tx.logs[0].event, 'RoleDefinition', 'event');
       assert.equal(tx.logs[0].args.role, ROLE_NEW, 'role');
     });
 
@@ -255,12 +248,12 @@ contract('OperableCore', function (accounts) {
       const tx = await core.defineRole(ROLE_NEW, ['0xe68fdc5f'], { from: bothRoles });
       assert.ok(tx.receipt.status, 'Status');
       assert.equal(tx.logs.length, 1);
-      assert.equal(tx.logs[0].event, 'RoleDefined', 'event');
+      assert.equal(tx.logs[0].event, 'RoleDefinition', 'event');
       assert.equal(tx.logs[0].args.role, ROLE_NEW, 'role');
     });
 
     it('should prevent non authorized to define role', async function () {
-      await assertRevert(core.defineRole(ROLE_NEW, ['0xe68fdc5f'], { from: roleAssignerOnly }), 'OC01');
+      await assertRevert(core.defineRole(ROLE_NEW, ['0xe68fdc5f'], { from: roleAssignerOnly }), 'CO01');
     });
 
     describe('And OpAssigner 2 revoked', function () {
@@ -270,40 +263,39 @@ contract('OperableCore', function (accounts) {
 
       it('should prevent former "OpAssigner 2" to add core operators', async function () {
         await assertRevert(core.assignOperators(
-          ALL_PRIVILEGES, [anyUser], { from: bothRoles }), 'OC01');
+          ALL_PRIVILEGES, [anyUser], { from: bothRoles }), 'CO01');
       });
 
       it('should prevent former "OpAssigner 2" to revoke core operators', async function () {
         await assertRevert(core.revokeOperators([sysOperator],
-          { from: bothRoles }), 'OC01');
+          { from: bothRoles }), 'CO01');
       });
     });
   });
 
   describe('with a proxy and a delegate defined', function () {
-    let proxy;
-
     beforeEach(async function () {
       proxy = await OperableProxyMock.new(core.address);
-      await core.defineDelegate(1, core.address);
+      delegate = await DelegateMock.new();
+      await core.defineDelegate(1, delegate.address, { from: sysOperator });
     });
 
     it('should have a delegate', async function () {
       const delegateAddress = await core.delegate(1);
-      assert.equal(delegateAddress, core.address, 'delegate');
+      assert.equal(delegateAddress, delegate.address, 'delegate');
     });
 
     it('should let sys operator define a proxy', async function () {
       const tx = await core.defineProxy(proxy.address, 1, { from: sysOperator });
       assert.ok(tx.receipt.status, 'Status');
       assert.equal(tx.logs.length, 1);
-      assert.equal(tx.logs[0].event, 'ProxyDefined', 'event');
+      assert.equal(tx.logs[0].event, 'ProxyDefinition', 'event');
       assert.equal(tx.logs[0].args.proxy, proxy.address, 'proxy');
       assert.equal(tx.logs[0].args.delegateId, 1, 'delegateId');
     });
 
     it('should prevent defining a proxy with ALL_PROXIES address', async function () {
-      await assertRevert(core.defineProxy(ALL_PROXIES, 1, { from: sysOperator }), 'OC06');
+      await assertRevert(core.defineProxy(ALL_PROXIES, 1, { from: sysOperator }), 'CO09');
     });
 
     describe('with a proxy configured', function () {
@@ -334,13 +326,13 @@ contract('OperableCore', function (accounts) {
       it('should prevent operator to assign proxy operators to no privileges', async function () {
         await assertRevert(
           core.assignProxyOperators(
-            proxy.address, NO_PRIVILEGES, [accounts[2], accounts[3]]), 'OC04');
+            proxy.address, NO_PRIVILEGES, [accounts[2], accounts[3]]), 'CO05');
       });
 
       it('should prevent non operator to assign proxy operators', async function () {
         await assertRevert(
           core.assignProxyOperators(
-            proxy.address, ALL_PRIVILEGES, [accounts[2], accounts[3]], { from: nonOperator }), 'OC01');
+            proxy.address, ALL_PRIVILEGES, [accounts[2], accounts[3]], { from: nonOperator }), 'CO01');
       });
 
       it('should let operator to remove a proxy', async function () {
@@ -352,27 +344,27 @@ contract('OperableCore', function (accounts) {
       });
 
       it('should prevent operator to remove a non proxy', async function () {
-        await assertRevert(core.removeProxy(accounts[0], { from: sysOperator }), 'CO06');
+        await assertRevert(core.removeProxy(accounts[0], { from: sysOperator }), 'CO12');
       });
 
       it('should prevent non operator to remove a proxy', async function () {
-        await assertRevert(core.removeProxy(proxy.address, { from: nonOperator }), 'OC02');
+        await assertRevert(core.removeProxy(proxy.address, { from: nonOperator }), 'CO02');
       });
 
       it('should let operator to migrate a proxy', async function () {
         const tx = await core.migrateProxy(proxy.address, core.address, { from: sysOperator });
         assert.ok(tx.receipt.status, 'Status');
         assert.equal(tx.logs.length, 1);
-        assert.equal(tx.logs[0].event, 'ProxyMigrated', 'event');
+        assert.equal(tx.logs[0].event, 'ProxyMigration', 'event');
         assert.equal(tx.logs[0].args.proxy, proxy.address, 'proxy');
       });
 
       it('should prevent operator to migrate a non proxy', async function () {
-        await assertRevert(core.migrateProxy(accounts[0], core.address, { from: sysOperator }), 'CO06');
+        await assertRevert(core.migrateProxy(accounts[0], core.address, { from: sysOperator }), 'CO12');
       });
 
       it('should prevent non operator to migrate a proxy', async function () {
-        await assertRevert(core.migrateProxy(proxy.address, core.address, { from: nonOperator }), 'OC02');
+        await assertRevert(core.migrateProxy(proxy.address, core.address, { from: nonOperator }), 'CO02');
       });
     });
   });
@@ -387,9 +379,9 @@ contract('OperableCore', function (accounts) {
       // core operator with no proxy access
       await core.assignOperators(ALL_PRIVILEGES, [accounts[2]]);
 
-      await core.defineDelegate(1, core.address, { from: accounts[2] });
-      await core.defineProxy(proxy1.address, 1, { from: accounts[2] });
-      await core.defineProxy(proxy2.address, 1, { from: accounts[2] });
+      await core.defineDelegate(1, delegate.address, { from: sysOperator });
+      await core.defineProxy(proxy1.address, 1, { from: sysOperator });
+      await core.defineProxy(proxy2.address, 1, { from: sysOperator });
 
       // proxy1 operator
       await core.assignProxyOperators(proxy1.address, ALL_PRIVILEGES, [accounts[3]]);
@@ -449,34 +441,34 @@ contract('OperableCore', function (accounts) {
     });
 
     it('should let core operator to operate core', async function () {
-      const tx = await core.successAsCoreOp(proxy1.address, { from: accounts[2] });
+      const tx = await core.defineProxy(accounts[0], 1, { from: accounts[2] });
       assert.ok(tx.receipt.status, 'Status');
     });
 
     it('should prevent proxy1 operator to operate core', async function () {
-      await assertRevert(core.successAsCoreOp(proxy1.address, { from: accounts[3] }), 'OC02');
+      await assertRevert(core.defineProxy(accounts[0], 1, { from: accounts[3] }), 'CO02');
     });
 
     it('should prevent core operator to operate proxy1 and proxy2', async function () {
-      await assertRevert(core.successAsProxyOp(proxy1.address, { from: accounts[2] }), 'OC03');
-      await assertRevert(core.successAsProxyOp(proxy2.address, { from: accounts[2] }), 'OC03');
+      await assertRevert(coreAsDelegate.methods[DELEGATE_METHOD](proxy1.address, true, { from: accounts[2] }), 'CO03');
+      await assertRevert(coreAsDelegate.methods[DELEGATE_METHOD](proxy2.address, true, { from: accounts[2] }), 'CO03');
     });
 
     it('should let proxy1 operator to operate proxy1 but not proxy2', async function () {
-      const tx1 = await core.successAsProxyOp(proxy1.address, { from: accounts[3] });
+      const tx1 = await coreAsDelegate.methods[DELEGATE_METHOD](proxy1.address, true, { from: accounts[3] });
       assert.ok(tx1.receipt.status, 'Status proxy1');
-      await assertRevert(core.successAsProxyOp(proxy2.address, { from: accounts[3] }), 'OC03');
+      await assertRevert(coreAsDelegate.methods[DELEGATE_METHOD](proxy2.address, true, { from: accounts[3] }), 'CO03');
     });
 
     it('should let proxy2 operator to operate proxy2 but not proxy1', async function () {
-      await assertRevert(core.successAsProxyOp(proxy1.address, { from: accounts[4] }), 'OC03');
-      const tx2 = await core.successAsProxyOp(proxy2.address, { from: accounts[4] });
+      await assertRevert(coreAsDelegate.methods[DELEGATE_METHOD](proxy1.address, true, { from: accounts[4] }), 'CO03');
+      const tx2 = await coreAsDelegate.methods[DELEGATE_METHOD](proxy2.address, true, { from: accounts[4] });
       assert.ok(tx2.receipt.status, 'Status proxy2');
     });
 
     it('should let core but restricted for proxy1 operator to operate proxy2 but not proxy1', async function () {
-      await assertRevert(core.successAsProxyOp(proxy1.address, { from: accounts[5] }), 'OC03');
-      const tx2 = await core.successAsProxyOp(proxy2.address, { from: accounts[5] });
+      await assertRevert(coreAsDelegate.methods[DELEGATE_METHOD](proxy1.address, true, { from: accounts[5] }), 'CO03');
+      const tx2 = await coreAsDelegate.methods[DELEGATE_METHOD](proxy2.address, true, { from: accounts[5] });
       assert.ok(tx2.receipt.status, 'Status proxy2');
     });
 
@@ -489,11 +481,11 @@ contract('OperableCore', function (accounts) {
     });
 
     it('should prevent proxy operator to revoke proxy1 operator', async function () {
-      await assertRevert(core.revokeProxyOperators(proxy1.address, [accounts[3]], { from: accounts[3] }), 'OC01');
+      await assertRevert(core.revokeProxyOperators(proxy1.address, [accounts[3]], { from: accounts[3] }), 'CO01');
     });
 
     it('should prevent core operator to revoke non proxy1 operator', async function () {
-      await assertRevert(core.revokeProxyOperators(proxy1.address, [accounts[2]], { from: accounts[2] }), 'OC08');
+      await assertRevert(core.revokeProxyOperators(proxy1.address, [accounts[2]], { from: accounts[2] }), 'CO08');
     });
 
     describe('With proxy1 operator revoked', function () {
@@ -507,7 +499,8 @@ contract('OperableCore', function (accounts) {
       });
 
       it('should prevent proxy1 operator to operate proxy1', async function () {
-        await assertRevert(core.successAsProxyOp(proxy1.address, { from: accounts[3] }), 'OC03');
+        await assertRevert(
+          coreAsDelegate.methods[DELEGATE_METHOD](proxy1.address, true, { from: accounts[3] }), 'CO03');
       });
     });
   });

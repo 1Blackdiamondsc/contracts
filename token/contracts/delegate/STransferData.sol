@@ -1,5 +1,8 @@
 pragma solidity ^0.8.0;
 
+import "@c-layer/common/contracts/interface/IProxy.sol";
+
+
 /**
  * @title STransferData
  * @dev STransferData structure
@@ -9,7 +12,7 @@ pragma solidity ^0.8.0;
 **/
 
 struct STransferData {
-  address token;
+  IProxy token;
   address caller;
   address sender;
   address receiver;
@@ -23,5 +26,6 @@ struct STransferData {
   bool receiverFetched;
 
   uint256 value;
+  uint256 tokenId;
   uint256 convertedValue;
 }

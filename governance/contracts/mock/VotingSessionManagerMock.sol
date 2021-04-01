@@ -18,7 +18,7 @@ contract VotingSessionManagerMock is VotingSessionManager {
   /**
    * @dev constructor
    */
-  constructor(ITokenProxy _token, IVotingSessionDelegate _delegate)
+  constructor(ITokenERC20Proxy _token, IVotingSessionDelegate _delegate)
     VotingSessionManager(_token, _delegate) {
   }
 

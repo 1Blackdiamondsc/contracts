@@ -20,7 +20,7 @@ contract AuditableDelegateMock is AuditableDelegate, DelegateMock {
   /**
    * @dev testPrepareAudit
    */
-  function testPrepareAudit(address _token, address _caller,
+  function testPrepareAudit(IProxy _token, address _caller,
      address _sender, address _receiver, uint256 _value,
      uint256[] memory _configurationIds) public returns (bool)
   {
@@ -40,7 +40,7 @@ contract AuditableDelegateMock is AuditableDelegate, DelegateMock {
    * @dev Update all audit data
    */
   function testUpdateAllAudits(
-    address _token, address _caller, address _sender, address _receiver,
+    IProxy _token, address _caller, address _sender, address _receiver,
     uint256 _value, uint256[] memory _configurationIds) public returns (bool)
   {
     STransferData memory transferData_ = transferData(

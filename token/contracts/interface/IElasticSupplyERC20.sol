@@ -6,10 +6,10 @@ pragma solidity ^0.8.0;
  *
  * SPDX-License-Identifier: MIT
  */
-abstract contract IElasticSupplyERC20 {
+interface IElasticSupplyERC20 {
 
   event ElasticityUpdate(uint256 value);
 
-  function elasticity() public virtual view returns (uint256);
-  function defineElasticity(uint256 _elasticity) external virtual returns (bool);
+  function elasticity() external view returns (uint256);
+  function defineElasticity(uint256 _elasticity) external returns (bool);
 }

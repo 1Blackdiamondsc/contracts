@@ -12,36 +12,27 @@ pragma solidity ^0.8.0;
  **/
 library DelegateCall {
 
-  function _delegateCall(address _delegate) internal returns (bool status)
-  {
-    bytes memory result;
-    // solhint-disable-next-line avoid-low-level-calls
-    (status, result) = _delegate.delegatecall(msg.data);
-    require(status, string(result));
-  }
+  bytes4 internal constant DELEGATE_CALL_SELECTOR = bytes4(keccak256("delegateCall(bytes)"));
 
-  function _delegateCallBool(address _delegate) internal returns (bool status)
-  {
-    return abi.decode(_delegateCallBytes(_delegate), (bool));
-  }
-
-  function _delegateCallUint256(address _delegate) internal returns (uint256)
-  {
-    return abi.decode(_delegateCallBytes(_delegate), (uint256));
-  }
-
-  function _delegateCallBytes(address _delegate)
-    internal returns (bytes memory result)
+  function _delegateCall(address _delegate, bytes calldata _data) internal returns (bytes memory result)
   {
     bool status;
     // solhint-disable-next-line avoid-low-level-calls
-    (status, result) = _delegate.delegatecall(msg.data);
+    (status, result) = _delegate.delegatecall(_data);
     require(status, string(result));
   }
 
-  function _delegateCallString(address _delegate)
-    internal returns (string memory result)
-  {
-    result = abi.decode(_delegateCallBytes(_delegate), (string));
+  /**
+   * @dev forward static call
+   * @notice forward call to the delegate call core function
+   * @notice this will erase compiler view restriction
+   */
+  function _forwardStaticCall(address _forward, bytes calldata _data) internal view returns (bytes memory result) {
+    bool status;
+    // solhint-disable-next-line avoid-low-level-calls
+    (status, result) = _forward.staticcall(
+      abi.encodeWithSelector(DELEGATE_CALL_SELECTOR, _data));
+    require(status, string(result));
+    result = abi.decode(result, (bytes));
   }
 }

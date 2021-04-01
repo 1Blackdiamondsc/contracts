@@ -35,6 +35,7 @@ contract DelegateMock is TokenStorage {
       _transferData.receiverKeys,
       _transferData.receiverFetched,
       _transferData.value,
+      _transferData.value,
       _transferData.convertedValue);
   }
 
@@ -117,7 +118,7 @@ contract DelegateMock is TokenStorage {
    * @dev transferData
    */
   function transferData(
-    address _token, address _caller,
+    IProxy _token, address _caller,
     address _sender, address _receiver, uint256 _value)
     internal pure returns (STransferData memory)
   {
@@ -134,6 +135,7 @@ contract DelegateMock is TokenStorage {
       emptyArray,
       false,
       _value,
+      0,
       0);
   }
 
@@ -245,7 +247,7 @@ contract DelegateMock is TokenStorage {
       emit LogAuditMode(_senders[i], _receivers[i], _modes[i]);
     }
 
-    emit AuditTriggersDefined(_configurationId, _senders, _receivers, _modes);
+    emit AuditTriggersDefinition(_configurationId, _senders, _receivers, _modes);
     return true;
   }
 }

@@ -6,9 +6,9 @@
 
 const BN = require('bn.js');
 const assertRevert = require('./helpers/assertRevert');
-const TokenProxy = artifacts.require('TokenProxy.sol');
+const TokenERC20Proxy = artifacts.require('TokenERC20Proxy.sol');
 const TokenCore = artifacts.require('TokenCore.sol');
-const TokenDelegate = artifacts.require('TokenDelegate.sol');
+const TokenERC20Delegate = artifacts.require('TokenERC20Delegate.sol');
 const UserRegistryMock = artifacts.require('UserRegistryMock.sol');
 const RatesProviderMock = artifacts.require('RatesProviderMock.sol');
 
@@ -29,12 +29,42 @@ const AUDIT_STORAGE_ADDRESS = 0;
 const AUDIT_STORAGE_USER_ID = 1;
 const AUDIT_STORAGE_SHARED = 2;
 
+const readToken = async function (core, coreAsDelegate, token) {
+  const request = await coreAsDelegate.token.request(token.address);
+  const tokenData = await core.delegateCallView(request.data).then((x) =>
+    web3.eth.abi.decodeParameters(['bool', 'uint256', 'uint256', 'uint256', 'address[]', 'uint256', 'address[]'], x),
+  );
+
+  return {
+    mintingFinished: tokenData[0],
+    allTimeMinted: tokenData[1],
+    allTimeBurned: tokenData[2],
+    allTimeSeized: tokenData[3],
+    locks: tokenData[4],
+    frozenUntil: tokenData[5],
+    rules: tokenData[6],
+  };
+};
+
+const readLock = async function (core, coreAsDelegate, token, sender, receiver) {
+  const request = await coreAsDelegate.lock.request(token.address, sender, receiver);
+  const lockData = await core.delegateCallView(request.data).then((x) =>
+    web3.eth.abi.decodeParameters(['uint64', 'uint64'], x),
+  );
+
+  return {
+    startAt: lockData[0],
+    endAt: lockData[1],
+  };
+};
+
 contract('TokenCore', function (accounts) {
-  let token, core, delegate, userRegistry, ratesProvider;
+  let token, core, coreAsDelegate, delegate, userRegistry, ratesProvider;
 
   beforeEach(async function () {
-    delegate = await TokenDelegate.new();
+    delegate = await TokenERC20Delegate.new();
     core = await TokenCore.new('Test', [accounts[0]]);
+    coreAsDelegate = await TokenERC20Delegate.at(core.address);
 
     ratesProvider = await RatesProviderMock.new('Test');
     await ratesProvider.defineCurrencies([CHF_ADDRESS, SYMBOL_BYTES], ['0', '0'], '100');
@@ -66,7 +96,7 @@ contract('TokenCore', function (accounts) {
 
     assert.ok(tx.receipt.status, 'Status');
     assert.equal(tx.logs.length, 1);
-    assert.equal(tx.logs[0].event, 'TokenDelegateDefined', 'event');
+    assert.equal(tx.logs[0].event, 'TokenDelegateDefinition', 'event');
     assert.equal(tx.logs[0].args.delegateId, 1, 'delegateId');
     assert.equal(tx.logs[0].args.delegate, delegate.address, 'delegate');
     assert.deepEqual(tx.logs[0].args.configurations.map((x) => x.toString()), ['1', '2', '3'], 'configurations');
@@ -76,7 +106,7 @@ contract('TokenCore', function (accounts) {
     const tx = await core.defineOracle(userRegistry.address, ratesProvider.address, CHF_ADDRESS);
     assert.ok(tx.receipt.status, 'Status');
     assert.equal(tx.logs.length, 1);
-    assert.equal(tx.logs[0].event, 'OracleDefined', 'event');
+    assert.equal(tx.logs[0].event, 'OracleDefinition', 'event');
     assert.equal(tx.logs[0].args.userRegistry, userRegistry.address, 'user registry');
     assert.equal(tx.logs[0].args.ratesProvider, ratesProvider.address, 'ratesProvider');
     assert.equal(tx.logs[0].args.currency.toString(), CHF_ADDRESS, 'currency');
@@ -92,7 +122,7 @@ contract('TokenCore', function (accounts) {
       const tx = await core.defineOracle(userRegistry.address, ratesProvider.address, CHF_ADDRESS);
       assert.ok(tx.receipt.status, 'Status');
       assert.equal(tx.logs.length, 1);
-      assert.equal(tx.logs[0].event, 'OracleDefined', 'event');
+      assert.equal(tx.logs[0].event, 'OracleDefinition', 'event');
       assert.equal(tx.logs[0].args.userRegistry, userRegistry.address, 'user registry');
       assert.equal(tx.logs[0].args.ratesProvider, ratesProvider.address, 'ratesProvider');
       assert.equal(tx.logs[0].args.currency.toLowerCase(), CHF_ADDRESS, 'currency');
@@ -103,7 +133,7 @@ contract('TokenCore', function (accounts) {
       const tx = await core.defineOracle(userRegistry.address, ratesProvider.address, CHF_ADDRESS);
       assert.ok(tx.receipt.status, 'Status');
       assert.equal(tx.logs.length, 1);
-      assert.equal(tx.logs[0].event, 'OracleDefined', 'event');
+      assert.equal(tx.logs[0].event, 'OracleDefinition', 'event');
       assert.equal(tx.logs[0].args.userRegistry, userRegistry.address, 'user registry');
       assert.equal(tx.logs[0].args.ratesProvider, ratesProvider.address, 'ratesProvider');
       assert.equal(tx.logs[0].args.currency.toLowerCase(), CHF_ADDRESS, 'currency');
@@ -125,7 +155,7 @@ contract('TokenCore', function (accounts) {
 
     assert.ok(tx.receipt.status, 'Status');
     assert.equal(tx.logs.length, 1);
-    assert.equal(tx.logs[0].event, 'AuditConfigurationDefined', 'event');
+    assert.equal(tx.logs[0].event, 'AuditConfigurationDefinition', 'event');
     assert.equal(tx.logs[0].args.configurationId, 2, 'configurationId');
     assert.equal(tx.logs[0].args.scopeId, 3, 'scopeId');
     assert.equal(tx.logs[0].args.mode, AUDIT_BOTH, 'mode');
@@ -141,7 +171,7 @@ contract('TokenCore', function (accounts) {
 
     assert.ok(tx.receipt.status, 'Status');
     assert.equal(tx.logs.length, 1);
-    assert.equal(tx.logs[0].event, 'AuditTriggersDefined', 'event');
+    assert.equal(tx.logs[0].event, 'AuditTriggersDefinition', 'event');
     assert.equal(tx.logs[0].args.configurationId, 2, 'configurationId');
     assert.deepEqual(tx.logs[0].args.senders, [accounts[1], accounts[2]], 'senders');
     assert.deepEqual(tx.logs[0].args.receivers, [accounts[2], accounts[3]], 'receivers');
@@ -249,32 +279,31 @@ contract('TokenCore', function (accounts) {
     });
 
     it('should let define a token', async function () {
-      token = await TokenProxy.new(core.address);
+      token = await TokenERC20Proxy.new(core.address);
       const tx = await core.defineToken(
         token.address, 1, NAME, SYMBOL, DECIMALS);
       assert.ok(tx.receipt.status, 'Status');
       assert.equal(tx.logs.length, 2, 'logs');
-      assert.equal(tx.logs[0].event, 'ProxyDefined', 'event');
+      assert.equal(tx.logs[0].event, 'ProxyDefinition', 'event');
       assert.equal(tx.logs[0].args.proxy, token.address, 'proxy');
       assert.equal(tx.logs[0].args.delegateId, 1, 'delegateId');
-      assert.equal(tx.logs[1].event, 'TokenDefined', 'event');
+      assert.equal(tx.logs[1].event, 'TokenDefinition', 'event');
       assert.equal(tx.logs[1].args.token, token.address, 'token');
       assert.equal(tx.logs[1].args.name, NAME, 'name');
       assert.equal(tx.logs[1].args.symbol, SYMBOL, 'symbol');
-      assert.equal(tx.logs[1].args.decimals, DECIMALS, 'decimals');
     });
 
     describe('With a token defined', function () {
       let token;
 
       beforeEach(async function () {
-        token = await TokenProxy.new(core.address);
+        token = await TokenERC20Proxy.new(core.address);
         await core.defineToken(
           token.address, 1, NAME, SYMBOL, DECIMALS);
       });
 
       it('should have a token data', async function () {
-        const tokenData = await core.token(token.address);
+        const tokenData = await readToken(core, coreAsDelegate, token);
         assert.ok(!tokenData.mintingFinished, 'mintingFinished');
         assert.equal(tokenData.allTimeMinted.toString(), '0', 'all time minted');
         assert.equal(tokenData.allTimeBurned.toString(), '0', 'all time burned');
@@ -285,33 +314,33 @@ contract('TokenCore', function (accounts) {
       });
 
       it('should have a minting finished', async function () {
-        await core.finishMinting(token.address);
-        const tokenData = await core.token(token.address);
+        await coreAsDelegate.finishMinting(token.address);
+        const tokenData = await readToken(core, coreAsDelegate, token);
         assert.ok(tokenData.mintingFinished, 'minting finished');
       });
 
       it('should have all time minted', async function () {
         const VAULT1 = '11111';
         const VAULT2 = '22222';
-        await core.mint(token.address, [accounts[0], accounts[1]], [VAULT1, VAULT2]);
-        const tokenData = await core.token(token.address);
+        await coreAsDelegate.mint(token.address, [accounts[0], accounts[1]], [VAULT1, VAULT2]);
+        const tokenData = await readToken(core, coreAsDelegate, token);
         assert.equal(tokenData.allTimeMinted.toString(),
           new BN(VAULT1).add(new BN(VAULT2)).toString(), 'all time minted');
       });
 
       it('should have all time burned', async function () {
         const BURN = '5555';
-        await core.mint(token.address, [accounts[0]], [BURN]);
-        await core.burn(token.address, BURN);
-        const tokenData = await core.token(token.address);
+        await coreAsDelegate.mint(token.address, [accounts[0]], [BURN]);
+        await coreAsDelegate.burn(token.address, BURN);
+        const tokenData = await readToken(core, coreAsDelegate, token);
         assert.equal(tokenData.allTimeBurned.toString(), BURN, 'all time burned');
       });
 
       it('should have all time seize', async function () {
         const SEIZE = '5555';
-        await core.mint(token.address, [accounts[1]], [SEIZE]);
-        await core.seize(token.address, accounts[1], SEIZE);
-        const tokenData = await core.token(token.address);
+        await coreAsDelegate.mint(token.address, [accounts[1]], [SEIZE]);
+        await coreAsDelegate.seize(token.address, accounts[1], SEIZE);
+        const tokenData = await readToken(core, coreAsDelegate, token);
         assert.equal(tokenData.allTimeSeized.toString(), SEIZE, 'all time seized');
       });
 
@@ -321,39 +350,39 @@ contract('TokenCore', function (accounts) {
 
         beforeEach(async function () {
           await core.defineProxy(delegate.address, 1);
-          await core.defineLock(delegate.address, accounts[1], accounts[2], LOCK_START, LOCK_END);
-          await core.defineTokenLocks(token.address, [token.address, delegate.address]);
+          await coreAsDelegate.defineLock(delegate.address, accounts[1], accounts[2], LOCK_START, LOCK_END);
+          await coreAsDelegate.defineTokenLocks(token.address, [token.address, delegate.address]);
         });
 
         it('should have a lock', async function () {
-          const lockData = await core.lock(delegate.address, accounts[1], accounts[2]);
+          const lockData = await readLock(core, coreAsDelegate, delegate, accounts[1], accounts[2]);
           assert.equal(lockData.startAt, LOCK_START, 'startAt');
           assert.equal(lockData.endAt, LOCK_END, 'endAt');
         });
 
         it('should have no locks', async function () {
-          const lockData = await core.lock(delegate.address, NULL_ADDRESS, NULL_ADDRESS);
+          const lockData = await readLock(core, coreAsDelegate, delegate, NULL_ADDRESS, NULL_ADDRESS);
           assert.equal(lockData.startAt.toString(), '0', 'startAt');
           assert.equal(lockData.endAt.toString(), '0', 'endAt');
         });
 
         it('should have the lock on the token', async function () {
-          const tokenData = await core.token(token.address);
+          const tokenData = await readToken(core, coreAsDelegate, token);
           assert.deepEqual(tokenData.locks, [token.address, delegate.address]);
         });
       });
 
       it('should have a frozen until date', async function () {
         const FREEZE_UNTIL = new Date('2100-01-01').getTime() / 1000;
-        await core.freezeManyAddresses(token.address,
+        await coreAsDelegate.freezeManyAddresses(token.address,
           [token.address], FREEZE_UNTIL);
-        const tokenData = await core.token(token.address);
+        const tokenData = await readToken(core, coreAsDelegate, token);
         assert.equal(tokenData.frozenUntil.toString(), FREEZE_UNTIL, 'frozen until');
       });
 
       it('should have a rules', async function () {
-        await core.defineRules(token.address, [token.address, accounts[0]]);
-        const tokenData = await core.token(token.address);
+        await coreAsDelegate.defineRules(token.address, [token.address, accounts[0]]);
+        const tokenData = await readToken(core, coreAsDelegate, token);
         assert.deepEqual(tokenData.rules, [token.address, accounts[0]], 'rules');
       });
 
@@ -363,7 +392,7 @@ contract('TokenCore', function (accounts) {
         assert.equal(tx.logs.length, 1);
         assert.equal(tx.logs[0].args.proxy, token.address, 'token');
         assert.equal(tx.logs[0].args.newCore, accounts[0], 'newCore');
-        assert.equal(tx.logs[0].event, 'ProxyMigrated', 'event');
+        assert.equal(tx.logs[0].event, 'ProxyMigration', 'event');
 
         const newCoreAddress = await token.core();
         assert.equal(newCoreAddress, accounts[0], 'newCoreAddress');
@@ -378,7 +407,7 @@ contract('TokenCore', function (accounts) {
       });
 
       it('should let remove and redefine it with same mapping history', async function () {
-        await core.mint(token.address, [accounts[0], accounts[1]], [123, 456]);
+        await coreAsDelegate.mint(token.address, [accounts[0], accounts[1]], [123, 456]);
         await core.removeProxy(token.address);
         await core.defineToken(
           token.address, 1, NAME, SYMBOL, DECIMALS);
@@ -398,21 +427,19 @@ contract('TokenCore', function (accounts) {
         });
 
         it('should have no name', async function () {
-          const name = await token.name();
-          assert.equal(name, '', 'no names');
+          await assertRevert(token.name(), 'BC03');
         });
 
         it('should have no symbol', async function () {
-          const symbol = await token.symbol();
-          assert.equal(symbol, '', 'no symbol');
+          await assertRevert(token.symbol(), 'BC03');
         });
 
         it('should have no decimals', async function () {
-          await assertRevert(token.decimals(), 'CO01');
+          await assertRevert(token.decimals(), 'BC03');
         });
 
         it('should have no supplies', async function () {
-          await assertRevert(token.totalSupply(), 'CO01');
+          await assertRevert(token.totalSupply(), 'BC03');
         });
       });
     });

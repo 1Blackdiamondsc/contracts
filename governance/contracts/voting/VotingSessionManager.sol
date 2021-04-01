@@ -1,7 +1,6 @@
 pragma solidity ^0.8.0;
 
 import "@c-layer/common/contracts/call/DelegateCall.sol";
-import "@c-layer/common/contracts/call/DelegateCallView.sol";
 import "../interface/IVotingSessionManager.sol";
 import "./VotingSessionStorage.sol";
 
@@ -19,19 +18,19 @@ import "./VotingSessionStorage.sol";
  *   VM04: Token has no valid core
  *   VM05: Only contract owner may define its sponsor
  */
-contract VotingSessionManager is IVotingSessionManager, DelegateCallView, VotingSessionStorage {
+contract VotingSessionManager is IVotingSessionManager, VotingSessionStorage {
   using DelegateCall for address;
 
   modifier onlyOperator() {
     require(core_.hasProxyPrivilege(
-      msg.sender, address(this), msg.sig), "VM01");
+      msg.sender, IProxy(address(this)), msg.sig), "VM01");
     _;
   }
 
   /**
    * @dev constructor
    */
-  constructor(ITokenProxy _token, IVotingSessionDelegate _delegate) {
+  constructor(ITokenERC20Proxy _token, IVotingSessionDelegate _delegate) {
     defineContractsInternal(_token, _delegate);
 
     resolutionRequirements[ANY_TARGET][ANY_METHOD] =
@@ -42,7 +41,7 @@ contract VotingSessionManager is IVotingSessionManager, DelegateCallView, Voting
    * @dev token
    */
   function contracts() public override view returns (
-    IVotingSessionDelegate delegate, ITokenProxy token, ITokenCore core)
+    IVotingSessionDelegate delegate, ITokenERC20Proxy token, ITokenCore core)
   {
     return (delegate_, token_, core_);
   }
@@ -195,7 +194,7 @@ contract VotingSessionManager is IVotingSessionManager, DelegateCallView, Voting
    * @dev nextSessionAt
    */
   function nextSessionAt(uint256) public override view returns (uint256) {
-    return _delegateCallUint256(address(delegate_));
+    return abi.decode(address(delegate_)._forwardStaticCall(msg.data), (uint256));
   }
 
   /**
@@ -204,7 +203,8 @@ contract VotingSessionManager is IVotingSessionManager, DelegateCallView, Voting
   function sessionStateAt(uint256, uint256) public override
     view returns (SessionState)
   {
-    return SessionState(_delegateCallUint256(address(delegate_)));
+    return SessionState(
+      abi.decode(address(delegate_)._forwardStaticCall(msg.data), (uint256)));
   }
 
   /**
@@ -213,7 +213,7 @@ contract VotingSessionManager is IVotingSessionManager, DelegateCallView, Voting
   function newProposalThresholdAt(uint256, uint256)
     public override view returns (uint256)
   {
-    return _delegateCallUint256(address(delegate_));
+    return abi.decode(address(delegate_)._forwardStaticCall(msg.data), (uint256));
   }
 
   /**
@@ -222,7 +222,7 @@ contract VotingSessionManager is IVotingSessionManager, DelegateCallView, Voting
   function proposalApproval(uint256, uint8)
     public override view returns (bool)
   {
-    return _delegateCallBool(address(delegate_));
+    return abi.decode(address(delegate_)._forwardStaticCall(msg.data), (bool));
   }
 
   /**
@@ -231,16 +231,17 @@ contract VotingSessionManager is IVotingSessionManager, DelegateCallView, Voting
   function proposalStateAt(uint256, uint8, uint256)
     public override view returns (ProposalState)
   {
-    return ProposalState(_delegateCallUint256(address(delegate_)));
+    return ProposalState(
+      abi.decode(address(delegate_)._forwardStaticCall(msg.data), (uint256)));
   }
 
   /**
    * @dev define contracts
    */
-  function defineContracts(ITokenProxy _token, IVotingSessionDelegate _delegate)
-    public override onlyOperator() returns (bool)
+  function defineContracts(ITokenERC20Proxy _token, IVotingSessionDelegate _delegate)
+    public override onlyOperator()
   {
-    return defineContractsInternal(_token, _delegate);
+    defineContractsInternal(_token, _delegate);
   }
 
   /**
@@ -248,9 +249,9 @@ contract VotingSessionManager is IVotingSessionManager, DelegateCallView, Voting
    */
   function updateSessionRule(
     uint64, uint64, uint64, uint64, uint64, uint8, uint8, uint8, uint256, address[] memory)
-    public override onlyOperator() returns (bool)
+    public override onlyOperator()
   {
-    return address(delegate_)._delegateCall();
+    address(delegate_)._delegateCall(msg.data);
   }
 
   /**
@@ -258,39 +259,37 @@ contract VotingSessionManager is IVotingSessionManager, DelegateCallView, Voting
    */
   function updateResolutionRequirements(
     address[] memory, bytes4[] memory, uint128[] memory, uint128[] memory, uint256[] memory)
-    public override onlyOperator() returns (bool)
+    public override onlyOperator()
   {
-    return address(delegate_)._delegateCall();
+    address(delegate_)._delegateCall(msg.data);
   }
 
   /**
    * @dev defineSponsor
    */
-  function defineSponsor(address _sponsor, uint64 _until) public override returns (bool) {
+  function defineSponsor(address _sponsor, uint64 _until) public override {
     sponsors[msg.sender] = Sponsor(_sponsor, _until);
-    emit SponsorDefined(msg.sender, _sponsor, _until);
-    return true;
+    emit SponsorDefinition(msg.sender, _sponsor, _until);
   }
 
   /**
    * @dev defineSponsorOf
    */
   function defineSponsorOf(Ownable _contract, address _sponsor, uint64 _until)
-    public override returns (bool)
+    public override
   {
     require(_contract.owner() == msg.sender, "VM05");
     sponsors[address(_contract)] = Sponsor(_sponsor, _until);
-    emit SponsorDefined(address(_contract), _sponsor, _until);
-    return true;
+    emit SponsorDefinition(address(_contract), _sponsor, _until);
   }
 
   /**
    * @dev defineProposal
    */
   function defineProposal(string memory, string memory,
-    bytes32, address, bytes memory, uint8, uint8) public override returns (bool)
+    bytes32, address, bytes memory, uint8, uint8) public override
   {
-    return address(delegate_)._delegateCall();
+    address(delegate_)._delegateCall(msg.data);
   }
 
   /**
@@ -298,55 +297,55 @@ contract VotingSessionManager is IVotingSessionManager, DelegateCallView, Voting
    */
   function updateProposal(
     uint8, string memory, string memory, bytes32, address, bytes memory, uint8, uint8)
-    public override returns (bool)
+    public override
   {
-    return address(delegate_)._delegateCall();
+    address(delegate_)._delegateCall(msg.data);
   }
 
   /**
    * @dev cancelProposal
    */
-  function cancelProposal(uint8) public override returns (bool)
+  function cancelProposal(uint8) public override
   {
-    return address(delegate_)._delegateCall();
+    address(delegate_)._delegateCall(msg.data);
   }
 
   /**
    * @dev submitVote
    */
-  function submitVote(uint256) public override returns (bool)
+  function submitVote(uint256) public override
   {
-    return address(delegate_)._delegateCall();
+    address(delegate_)._delegateCall(msg.data);
   }
 
   /**
    * @dev submitVotesOnBehalf
    */
-  function submitVotesOnBehalf(address[] memory, uint256) public override returns (bool)
+  function submitVotesOnBehalf(address[] memory, uint256) public override
   {
-    return address(delegate_)._delegateCall();
+    address(delegate_)._delegateCall(msg.data);
   }
 
   /**
    * @dev execute resolutions
    */
-  function executeResolutions(uint8[] memory) public override returns (bool)
+  function executeResolutions(uint8[] memory) public override
   {
-    return address(delegate_)._delegateCall();
+    address(delegate_)._delegateCall(msg.data);
   }
 
   /**
    * @dev archiveSession
    **/
-  function archiveSession() public override returns (bool) {
-    return address(delegate_)._delegateCall();
+  function archiveSession() public override {
+    delegate_.archiveSession();
   }
 
   /**
    * @dev define contracts internal
    */
-  function defineContractsInternal(ITokenProxy _token, IVotingSessionDelegate _delegate)
-    internal returns (bool)
+  function defineContractsInternal(ITokenERC20Proxy _token, IVotingSessionDelegate _delegate)
+    internal
   {
     require(address(_token) != address(0), "VM02");
     require(address(_delegate) != address(0), "VM03");
@@ -357,13 +356,12 @@ contract VotingSessionManager is IVotingSessionManager, DelegateCallView, Voting
     if (token_ != _token || core_ != core) {
       token_ = _token;
       core_ = core;
-      emit TokenDefined(address(token_), address(core_));
+      emit TokenDefinition(address(token_), address(core_));
     }
 
     if (delegate_ != _delegate) {
       delegate_ = _delegate;
-      emit DelegateDefined(address(delegate_));
+      emit DelegateDefinition(address(delegate_));
     }
-    return true;
   }
 }

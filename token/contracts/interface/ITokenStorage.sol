@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 import "@c-layer/oracle/contracts/interface/IUserRegistry.sol";
 import "@c-layer/oracle/contracts/interface/IRatesProvider.sol";
 import "./IRule.sol";
+import "./ITokenERC20Proxy.sol";
 
 
 /**
@@ -12,7 +13,7 @@ import "./IRule.sol";
  * @author Cyril Lapinte - <cyril.lapinte@openfiz.com>
  * SPDX-License-Identifier: MIT
  */
-abstract contract ITokenStorage {
+interface ITokenStorage {
   enum TransferCode {
     UNKNOWN,
     OK,
@@ -47,15 +48,13 @@ abstract contract ITokenStorage {
     BOTH
   }
 
-  address internal constant ANY_ADDRESSES = address(0x416e79416464726573736573); // "AnyAddresses"
-
-  event OracleDefined(
+  event OracleDefinition(
     IUserRegistry userRegistry,
     IRatesProvider ratesProvider,
     address currency);
-  event TokenDelegateDefined(uint256 indexed delegateId, address delegate, uint256[] configurations);
+  event TokenDelegateDefinition(uint256 indexed delegateId, address delegate, uint256[] configurations);
   event TokenDelegateRemoved(uint256 indexed delegateId);
-  event AuditConfigurationDefined(
+  event AuditConfigurationDefinition(
     uint256 indexed configurationId,
     uint256 scopeId,
     AuditTriggerMode mode,
@@ -63,7 +62,7 @@ abstract contract ITokenStorage {
     uint256[] receiverKeys,
     IRatesProvider ratesProvider,
     address currency);
-  event AuditTriggersDefined(
+  event AuditTriggersDefinition(
     uint256 indexed configurationId,
     address[] senders,
     address[] receivers,
@@ -72,19 +71,19 @@ abstract contract ITokenStorage {
   event SelfManaged(address indexed holder, bool active);
 
   // ERC20
-  event Minted(address indexed token, uint256 amount);
-  event Burned(address indexed token, uint256 amount);
-  event Seize(address indexed token, address account, uint256 amount);
+  event MintERC20(ITokenERC20Proxy indexed token, uint256 amount);
+  event BurnERC20(ITokenERC20Proxy indexed token, uint256 amount);
+  event SeizeERC20(ITokenERC20Proxy indexed token, address account, uint256 amount);
 
   // ERC721
-  event TemplateURIUpdated(string baseURI, string suffixURI);
-  event MintedERC721(address indexed token, uint256[] tokenIds);
-  event BurnedERC721(address indexed token, uint256[] tokenIds);
-  event SeizeERC721(address indexed token, address account, uint256[] tokenIds);
+  event ERC721TemplateURIUpdated(string baseURI, string suffixURI);
+  event MintERC721(IProxy indexed token, uint256[] tokenIds);
+  event BurnERC721(IProxy indexed token, uint256[] tokenIds);
+  event SeizeERC721(IProxy indexed token, address account, uint256[] tokenIds);
 
-  event MintFinished(address indexed token);
-  event RulesDefined(address indexed token, IRule[] rules);
-  event LockDefined(
+  event MintFinish(IProxy indexed token);
+  event RulesDefinition(IProxy indexed token, IRule[] rules);
+  event LockDefinition(
     address indexed lock,
     address sender,
     address receiver,
@@ -92,22 +91,22 @@ abstract contract ITokenStorage {
     uint256 endAt
   );
   event Freeze(
-    address indexed token,
+    IProxy indexed token,
     address address_,
     uint256 until);
-  event TokenLocksDefined(
-    address indexed token,
+  event TokenLocksDefinition(
+    IProxy indexed token,
     address[] locks);
-  event TokenDefined(
-    address indexed token,
+  event TokenDefinition(
+    IProxy indexed token,
     string name,
     string symbol);
 
   event LogTransferData(
-    address token, address caller, address sender, address receiver,
+    IProxy token, address caller, address sender, address receiver,
     uint256 senderId, uint256[] senderKeys, bool senderFetched,
     uint256 receiverId, uint256[] receiverKeys, bool receiverFetched,
-    uint256 value, uint256 convertedValue);
+    uint256 value, uint256 tokenId, uint256 convertedValue);
   event LogTransferAuditData(
     uint256 auditConfigurationId, uint256 scopeId,
     address currency, IRatesProvider ratesProvider,

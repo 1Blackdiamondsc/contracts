@@ -1,9 +1,8 @@
 pragma solidity ^0.8.0;
 
-import "@c-layer/common/contracts/interface/IOperableCore.sol";
+import "@c-layer/common/contracts/interface/ICore.sol";
 import "@c-layer/oracle/contracts/interface/IUserRegistry.sol";
 import "@c-layer/oracle/contracts/interface/IRatesProvider.sol";
-import "../interface/ITokenAccessDefinitions.sol";
 import "../interface/ITokenCore.sol";
 
 
@@ -14,7 +13,7 @@ import "../interface/ITokenCore.sol";
  * @author Cyril Lapinte - <cyril.lapinte@openfiz.com>
  * SPDX-License-Identifier: MIT
  */
-abstract contract ICoreConfiguration is ITokenAccessDefinitions {
+interface ICoreConfiguration {
 
   enum Configuration {
     DEFAULT,
@@ -33,20 +32,7 @@ abstract contract ICoreConfiguration is ITokenAccessDefinitions {
     SECURITY
   }
 
-  // The definition below should be considered as a constant
-  // Solidity 0.6.x do not provide ways to have arrays as constants
-  bytes4[] public requiredCorePrivileges = [
-    DEFINE_CORE_CONFIGURATION_PRIV,
-    DEFINE_AUDIT_CONFIGURATION_PRIV,
-    DEFINE_TOKEN_DELEGATE_PRIV,
-    DEFINE_ROLE_PRIV,
-    ASSIGN_OPERATORS_PRIV,
-    REVOKE_OPERATORS_PRIV,
-    ASSIGN_PROXY_OPERATORS_PRIV,
-    DEFINE_ORACLE_PRIV
-  ];
-
-  function hasCoreAccess(IOperableCore _core) virtual public view returns (bool);
+  function hasCoreAccess(ICore _core) external view returns (bool);
   function defineCoreConfigurations(
     ITokenCore _core,
     address[] calldata _factories,
@@ -55,5 +41,5 @@ abstract contract ICoreConfiguration is ITokenAccessDefinitions {
     IUserRegistry _userRegistry,
     IRatesProvider _ratesProvider,
     address _currency
-  ) virtual external returns (bool);
+  ) external returns (bool);
 }

@@ -1,6 +1,7 @@
 pragma solidity ^0.8.0;
 
 import "../interface/IProxy.sol";
+import "../call/DelegateCall.sol";
 
 
 /**
@@ -14,48 +15,45 @@ import "../interface/IProxy.sol";
  *   PR02: Core request should be successful
  **/
 contract Proxy is IProxy {
+  using DelegateCall for address;
 
-  address public override core;
+  ICore public override core;
 
   /**
    * @dev Throws if called by any account other than a core
    */
   modifier onlyCore {
-    require(core == msg.sender, "PR01");
+    require(address(core) == msg.sender, "PR01");
     _;
   }
 
-  constructor(address _core) {
+  constructor(ICore _core) {
     core = _core;
   }
 
   /**
    * @dev update the core
    */
-  function updateCore(address _core)
-    public onlyCore returns (bool)
+  function updateCore(ICore _core)
+    public override onlyCore returns (bool)
   {
     core = _core;
     return true;
   }
 
   /**
-   * @dev enforce static immutability (view)
+   * @dev static call to the core
    * @dev in order to read core value through internal core delegateCall
    */
   function staticCallUint256() internal view returns (uint256 value) {
-    (bool status, bytes memory result) = core.staticcall(msg.data);
-    require(status, string(result));
-    value = abi.decode(result, (uint256));
+    value = abi.decode(address(core)._forwardStaticCall(msg.data), (uint256));
   }
 
   /**
-   * @dev enforce static immutability (view)
+   * @dev static call to the core
    * @dev in order to read core value through internal core delegateCall
    */
   function staticCallString() internal view returns (string memory value) {
-    (bool status, bytes memory result) = core.staticcall(msg.data);
-    require(status, string(result));
-    value = abi.decode(result, (string));
+    value = abi.decode(address(core)._forwardStaticCall(msg.data), (string));
   }
 }

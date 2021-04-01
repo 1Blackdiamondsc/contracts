@@ -1,5 +1,8 @@
 pragma solidity ^0.8.0;
 
+import "./ICore.sol";
+
+
 /**
  * @title IProxy
  *
@@ -10,6 +13,7 @@ pragma solidity ^0.8.0;
  **/
 interface IProxy {
 
-  function core() external view returns (address);
+  function core() external view returns (ICore);
+  function updateCore(ICore _core) external returns (bool);
 
 }

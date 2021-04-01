@@ -1,9 +1,8 @@
 pragma solidity ^0.8.0;
 
-import "./IBaseTokenDelegate.sol";
 import "./ILockableDelegate.sol";
-import "./IMintableDelegate.sol";
 import "./IRuleEngineDelegate.sol";
+import "./IFreezableDelegate.sol";
 
 
 /**
@@ -15,8 +14,5 @@ import "./IRuleEngineDelegate.sol";
  *
  * Error messages
  */
-abstract contract ITokenDelegate is
-  ILockableDelegate, IRuleEngineDelegate, IMintableDelegate, IBaseTokenDelegate
-{
-
+interface ITokenDelegate is IFreezableDelegate, ILockableDelegate, IRuleEngineDelegate {
 }

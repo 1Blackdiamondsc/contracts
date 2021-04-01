@@ -6,7 +6,7 @@
 
 const assertRevert = require('../helpers/assertRevert');
 const OperableAsCoreMock = artifacts.require('OperableAsCoreMock.sol');
-const OperableCoreMock = artifacts.require('OperableCoreMock.sol');
+const Core = artifacts.require('Core.sol');
 const Proxy = artifacts.require('Proxy.sol');
 
 contract('OperableAsCore', function (accounts) {
@@ -14,7 +14,7 @@ contract('OperableAsCore', function (accounts) {
 
   beforeEach(async function () {
     contract = await OperableAsCoreMock.new();
-    core = await OperableCoreMock.new([ accounts[1] ]);
+    core = await Core.new([ accounts[1] ]);
     proxy = await Proxy.new(core.address);
   });
 

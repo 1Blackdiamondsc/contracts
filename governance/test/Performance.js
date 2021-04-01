@@ -6,8 +6,8 @@
 
 // const assertRevert = require('../helpers/assertRevert');
 const assertGasEstimate = require('./helpers/assertGasEstimate');
-const TokenProxy = artifacts.require('mock/TokenProxyMock.sol');
-const TokenDelegate = artifacts.require('mock/TokenDelegateMock.sol');
+const TokenERC20Proxy = artifacts.require('mock/TokenERC20ProxyMock.sol');
+const TokenERC20Delegate = artifacts.require('mock/TokenERC20DelegateMock.sol');
 const TokenCore = artifacts.require('mock/TokenCoreMock.sol');
 const VotingSessionManager = artifacts.require('voting/VotingSessionManager.sol');
 const VotingSessionDelegate = artifacts.require('voting/VotingSessionDelegate.sol');
@@ -37,7 +37,7 @@ const ARCHIVE_SESSION_COST = 259389;
 const DEFINE_PROPOSAL_WITH_ARCHIVING_COST = 260094;
 
 contract('Performance', function (accounts) {
-  let core, delegate, token, votingSession, votingDelegate;
+  let core, coreAsDelegate, delegate, token, votingSession, votingDelegate;
 
   const recipients = [accounts[0], accounts[1], accounts[2], accounts[3], accounts[5], accounts[6]];
   const supplies = ['100', '3000000', '2000000', '2000000', '1', '1000000'];
@@ -47,17 +47,18 @@ contract('Performance', function (accounts) {
   const proposalUrl = 'http://url.url';
 
   before(async function () {
-    delegate = await TokenDelegate.new();
+    delegate = await TokenERC20Delegate.new();
     core = await TokenCore.new('Test', [accounts[0], accounts[4]]);
     await core.defineTokenDelegate(1, delegate.address, [0, 1]);
     await core.manageSelf(true, { from: accounts[5] });
+    coreAsDelegate = await TokenERC20Delegate.at(core.address);
   });
 
   beforeEach(async function () {
-    token = await TokenProxy.new(core.address);
+    token = await TokenERC20Proxy.new(core.address);
     await core.defineToken(
       token.address, 1, NAME, SYMBOL, DECIMALS);
-    await core.mint(token.address, recipients, supplies);
+    await coreAsDelegate.mint(token.address, recipients, supplies);
 
     votingDelegate = await VotingSessionDelegate.new();
     votingSession = await VotingSessionManagerMock.new(token.address, votingDelegate.address);

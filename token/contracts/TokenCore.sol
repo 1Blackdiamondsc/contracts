@@ -1,9 +1,9 @@
 pragma solidity ^0.8.0;
 
-import "@c-layer/common/contracts/core/OperableCore.sol";
+import "@c-layer/common/contracts/core/Core.sol";
 import "./TokenStorage.sol";
 import "./interface/ITokenCore.sol";
-import "./interface/ITokenDelegate.sol";
+import "./interface/IBaseTokenDelegate.sol";
 
 
 /**
@@ -19,23 +19,15 @@ import "./interface/ITokenDelegate.sol";
  *   TC04: Mismatched between the configuration and the audit storage currency
  *   TC05: The audit triggers definition requires the same number of addresses and values
  **/
-contract TokenCore is ITokenCore, OperableCore, TokenStorage {
+contract TokenCore is ITokenCore, Core, TokenStorage {
 
   /**
    * @dev constructor
    */
   constructor(string memory _name, address[] memory _sysOperators)
-    OperableCore(_sysOperators)
+    Core(_sysOperators)
   {
     name_ = _name;
-  }
-
-  receive() external override payable {
-    delegateCall();
-  }
-
-  fallback() external override payable {
-    delegateCall();
   }
 
   function name() override public view returns (string memory) {
@@ -116,82 +108,20 @@ contract TokenCore is ITokenCore, OperableCore, TokenStorage {
     cumulatedReception = auditData.cumulatedReception;
   }
 
-  /**************  ERC20  **************/
-  function tokenName() override external view returns (string memory) {
-    return tokens[msg.sender].name;
-  }
-
-  function tokenSymbol() override external view returns (string memory) {
-    return tokens[msg.sender].symbol;
-  }
-
-  function decimals() override external onlyProxy returns (uint256) {
-    return delegateCallUint256();
-  }
-
-  function totalSupply() override external onlyProxy returns (uint256) {
-    return delegateCallUint256();
-  }
-
-  function balanceOf(address) external onlyProxy override returns (uint256) {
-    return delegateCallUint256();
-  }
-
-  function allowance(address, address)
-    override external onlyProxy returns (uint256)
-  {
-    return delegateCallUint256();
-  }
-
-  /***********  TOKEN DATA   ***********/
-  function token(address _token) override external view returns (
-    bool mintingFinished,
-    uint256 allTimeMinted,
-    uint256 allTimeBurned,
-    uint256 allTimeSeized,
-    address[] memory locks,
-    uint256 frozenUntil,
-    IRule[] memory rules) {
-    TokenData storage tokenData = tokens[_token];
-
-    mintingFinished = tokenData.mintingFinished;
-    allTimeMinted = tokenData.allTimeMinted;
-    allTimeBurned = tokenData.allTimeBurned;
-    allTimeSeized = tokenData.allTimeSeized;
-    locks = tokenData.locks;
-    frozenUntil = tokenData.frozenUntils[_token];
-    rules = tokenData.rules;
-  }
-
-  function lock(address _lock, address _sender, address _receiver) override external view returns (
-    uint64 startAt, uint64 endAt)
-  {
-    LockData storage lockData_ = locks[_lock][_sender][_receiver];
-    return (lockData_.startAt, lockData_.endAt);
-  }
-
-  function canTransfer(address, address, uint256)
-    override external onlyProxy returns (uint256)
-  {
-    return delegateCallUint256();
-  }
-
   /************  CORE ADMIN  ************/
-  function removeProxyInternal(address _token)
-    internal override returns (bool)
+  function removeProxyInternal(IProxy _token) internal override
   {
     super.removeProxyInternal(_token);
     delete tokens[_token];
-    return true;
   }
 
   function defineToken(
-    address _token,
+    IProxy _token,
     uint256 _delegateId,
     string calldata _name,
     string calldata _symbol,
     uint256 _decimals)
-    override external onlyCoreOp returns (bool)
+    override external onlyCoreOp
   {
     require(_token != ALL_PROXIES, "TC01");
     defineProxy(_token, _delegateId);
@@ -200,41 +130,37 @@ contract TokenCore is ITokenCore, OperableCore, TokenStorage {
     tokenData.symbol = _symbol;
     tokenData.decimals = _decimals;
 
-    emit TokenDefined(_token, _name, _symbol);
-    return true;
+    emit TokenDefinition(_token, _name, _symbol);
   }
 
   function defineOracle(
     IUserRegistry _userRegistry,
     IRatesProvider _ratesProvider,
-    address _currency)
-    override external onlyCoreOp returns (bool)
+    address _currency) override external onlyCoreOp
   {
     userRegistry_ = _userRegistry;
     ratesProvider_ = _ratesProvider;
     currency_ = _currency;
 
-    emit OracleDefined(userRegistry_, _ratesProvider, _currency);
-    return true;
+    emit OracleDefinition(userRegistry_, _ratesProvider, _currency);
   }
 
   function defineTokenDelegate(
     uint256 _delegateId,
     address _delegate,
-    uint256[] calldata _auditConfigurations) override external onlyCoreOp returns (bool)
+    uint256[] calldata _auditConfigurations) override external onlyCoreOp
   {
     require(_delegate == address(0) ||
-      ITokenDelegate(_delegate).checkConfigurations(_auditConfigurations), "TC03");
+      IBaseTokenDelegate(_delegate).checkConfigurations(_auditConfigurations), "TC03");
 
-    defineDelegateInternal(_delegateId, _delegate);
+    defineDelegate(_delegateId, _delegate);
     if(_delegate != address(0)) {
       delegatesConfigurations_[_delegateId] = _auditConfigurations;
-      emit TokenDelegateDefined(_delegateId, _delegate, _auditConfigurations);
+      emit TokenDelegateDefinition(_delegateId, _delegate, _auditConfigurations);
     } else {
       delete delegatesConfigurations_[_delegateId];
       emit TokenDelegateRemoved(_delegateId);
     }
-    return true;
   }
 
   function defineAuditConfiguration(
@@ -244,7 +170,7 @@ contract TokenCore is ITokenCore, OperableCore, TokenStorage {
     uint256[] calldata _senderKeys,
     uint256[] calldata _receiverKeys,
     IRatesProvider _ratesProvider,
-    address _currency) override external onlyCoreOp returns (bool)
+    address _currency) override external onlyCoreOp
   {
     // Mark permanently the core audit storage with the currency to be used with
     AuditStorage storage auditStorage = audits[address(this)][_scopeId];
@@ -261,7 +187,7 @@ contract TokenCore is ITokenCore, OperableCore, TokenStorage {
     auditConfiguration_.ratesProvider = _ratesProvider;
     auditConfiguration_.triggers[ANY_ADDRESSES][ANY_ADDRESSES] = _mode;
 
-    emit AuditConfigurationDefined(
+    emit AuditConfigurationDefinition(
       _configurationId,
       _scopeId,
       _mode,
@@ -269,22 +195,19 @@ contract TokenCore is ITokenCore, OperableCore, TokenStorage {
       _receiverKeys,
       _ratesProvider,
       _currency);
-    return true;
   }
 
-  function removeAudits(address _scope, uint256 _scopeId)
-    override external onlyCoreOp returns (bool)
+  function removeAudits(address _scope, uint256 _scopeId) override external onlyCoreOp
   {
     delete audits[_scope][_scopeId];
     emit AuditsRemoved(_scope, _scopeId);
-    return true;
   }
 
   function defineAuditTriggers(
     uint256 _configurationId,
     address[] calldata _senders,
     address[] calldata _receivers,
-    AuditTriggerMode[] calldata _modes) override external onlyCoreOp returns (bool)
+    AuditTriggerMode[] calldata _modes) override external onlyCoreOp
   {
     require(_senders.length == _receivers.length && _senders.length == _modes.length, "TC05");
 
@@ -293,8 +216,7 @@ contract TokenCore is ITokenCore, OperableCore, TokenStorage {
       auditConfiguration_.triggers[_senders[i]][_receivers[i]] = _modes[i];
     }
 
-    emit AuditTriggersDefined(_configurationId, _senders, _receivers, _modes);
-    return true;
+    emit AuditTriggersDefinition(_configurationId, _senders, _receivers, _modes);
   }
 
   function isSelfManaged(address _owner)
@@ -303,11 +225,9 @@ contract TokenCore is ITokenCore, OperableCore, TokenStorage {
     return selfManaged[_owner];
   }
 
-  function manageSelf(bool _active)
-    override external returns (bool)
+  function manageSelf(bool _active) override external
   {
     selfManaged[msg.sender] = _active;
     emit SelfManaged(msg.sender, _active);
-    return true;
   }
 }

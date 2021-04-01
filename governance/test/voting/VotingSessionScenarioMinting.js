@@ -5,8 +5,8 @@
  */
 
 const assertRevert = require('../helpers/assertRevert');
-const TokenProxy = artifacts.require('mock/TokenProxyMock.sol');
-const TokenDelegate = artifacts.require('mock/TokenDelegateMock.sol');
+const TokenERC20Proxy = artifacts.require('mock/TokenERC20ProxyMock.sol');
+const TokenERC20Delegate = artifacts.require('mock/TokenERC20DelegateMock.sol');
 const TokenCore = artifacts.require('mock/TokenCoreMock.sol');
 const VotingSessionDelegate = artifacts.require('voting/VotingSessionDelegate.sol');
 const VotingSessionManagerMock = artifacts.require('mock/VotingSessionManagerMock.sol');
@@ -68,7 +68,7 @@ const ProposalState = {
 };
 
 contract('VotingSessionScenarioMinting', function (accounts) {
-  let core, delegate, token, votingSession, votingDelegate;
+  let core, coreAsDelegate, delegate, token, votingSession, votingDelegate;
 
   const recipients = [accounts[0], accounts[1], accounts[2], accounts[3], accounts[5], accounts[6]];
   const supplies = ['100', '3500000', '1500000', '2000000', '1', '1000000'];
@@ -78,8 +78,10 @@ contract('VotingSessionScenarioMinting', function (accounts) {
   const proposalUrl = 'http://url.url';
 
   before(async function () {
-    delegate = await TokenDelegate.new();
+    delegate = await TokenERC20Delegate.new();
     core = await TokenCore.new('Test', [accounts[0], accounts[4]]);
+    coreAsDelegate = await TokenERC20Delegate.at(core.address);
+
     await core.defineTokenDelegate(1, delegate.address, [0, 1]);
     await core.manageSelf(true, { from: accounts[5] });
 
@@ -87,15 +89,15 @@ contract('VotingSessionScenarioMinting', function (accounts) {
   });
 
   beforeEach(async function () {
-    token = await TokenProxy.new(core.address);
+    token = await TokenERC20Proxy.new(core.address);
     await core.defineToken(
       token.address, 1, NAME, SYMBOL, DECIMALS);
-    await core.mint(token.address, recipients, supplies);
+    await coreAsDelegate.mint(token.address, recipients, supplies);
 
     votingSession = await VotingSessionManagerMock.new(token.address, votingDelegate.address);
 
     await core.defineProxy(votingSession.address, 1);
-    await core.defineTokenLocks(token.address, [token.address, votingSession.address]);
+    await coreAsDelegate.defineTokenLocks(token.address, [token.address, votingSession.address]);
     await core.assignProxyOperators(votingSession.address, ALL_PRIVILEGES, [votingSession.address]);
     await core.assignProxyOperators(token.address, ALL_PRIVILEGES, [votingSession.address]);
   });
@@ -119,7 +121,7 @@ contract('VotingSessionScenarioMinting', function (accounts) {
         '0',
         '0');
 
-      request1 = core.contract.methods.mint(token.address, [accounts[4]], ['13999900']).encodeABI();
+      request1 = coreAsDelegate.contract.methods.mint(token.address, [accounts[4]], ['13999900']).encodeABI();
       await votingSession.defineProposal(
         MINT_MORE_TOKENS,
         proposalUrl,

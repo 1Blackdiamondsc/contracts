@@ -32,11 +32,11 @@ contract ElasticSupplyERC20 is IElasticSupplyERC20, Ownable, MintableTokenERC20 
   ) MintableTokenERC20(_name, _symbol, _decimals, _initialAccount, _initialSupply)
   {}
 
-  function totalSupply() external override view returns (uint256) {
+  function totalSupply() public override view returns (uint256) {
     return totalSupply_ * elasticity() / ELASTICITY_PRECISION;
   }
 
-  function balanceOf(address _owner) external override view returns (uint256) {
+  function balanceOf(address _owner) public override view returns (uint256) {
     return balances[_owner] * elasticity() / ELASTICITY_PRECISION;
   }
 
@@ -69,6 +69,31 @@ contract ElasticSupplyERC20 is IElasticSupplyERC20, Ownable, MintableTokenERC20 
     balances[_to] = balances[_to] + baseValue;
 
     emit Transfer(_from, _to, _value);
+    return true;
+  }
+
+  function mintInternal(address _to, uint256 _value) internal override returns (bool)
+  {
+    uint256 currentElasticity = elasticity();
+    uint256 baseValue = _value * ELASTICITY_PRECISION / currentElasticity;
+    totalSupply_ = totalSupply_ + baseValue;
+    balances[_to] = balances[_to] + baseValue;
+    allTimeMinted_ = allTimeMinted_ + _value;
+
+    emit Mint(_to, _value);
+    emit Transfer(address(0), _to, _value);
+    return true;
+  }
+
+  function burnInternal(address _from, uint256 _value) internal override returns (bool)
+  {
+    uint256 currentElasticity = elasticity();
+    uint256 baseValue = _value * ELASTICITY_PRECISION / currentElasticity;
+    totalSupply_ = totalSupply_ - baseValue;
+    balances[_from] = balances[_from] - baseValue;
+
+    emit Transfer(_from, address(0), _value);
+    emit Burn(_from, _value);
     return true;
   }
 }

@@ -9,9 +9,9 @@ const YesNoRule = artifacts.require('YesNoRule.sol');
 
 const TOKEN_ADDRESS = '0x' + '123456789'.padStart(40, '0');
 
-const ESTIMATE_NO_RULES = 24935;
-const ESTIMATE_ONE_RULE = 29104;
-const ESTIMATE_TWO_RULES = 33195;
+const ESTIMATE_NO_RULES = 24868;
+const ESTIMATE_ONE_RULE = 29037;
+const ESTIMATE_TWO_RULES = 33128;
 
 contract('RuleEngineDelegate', function (accounts) {
   let delegate, yesRule, noRule;
@@ -35,7 +35,7 @@ contract('RuleEngineDelegate', function (accounts) {
     const tx = await delegate.defineRules(TOKEN_ADDRESS, [yesRule.address, noRule.address]);
     assert.ok(tx.receipt.status, 'Status');
     assert.equal(tx.logs.length, 1);
-    assert.equal(tx.logs[0].event, 'RulesDefined', 'event');
+    assert.equal(tx.logs[0].event, 'RulesDefinition', 'event');
     assert.equal(tx.logs[0].args.token, TOKEN_ADDRESS, 'token');
     assert.deepEqual(tx.logs[0].args.rules, [yesRule.address, noRule.address], 'rules');
   });
